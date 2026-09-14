@@ -53,7 +53,7 @@ Cada módulo sigue el patrón **Entity → Repository → Service → Controller
 | 🎮 Juegos | ✅ Hecho | Catálogo y filtros |
 | 📚 Biblioteca | ✅ Hecho | Juegos del usuario, favoritos, horas |
 | 👥 Amigos | ✅ Hecho | Solicitudes, aceptar, bloquear |
-| 🏷️ Motes | ⏳ Pendiente | Apodos privados entre amigos |
+| 🏷️ Motes | ✅ Hecho | Apodos privados entre amigos |
 | 💬 Chat | ⏳ Pendiente | Conversaciones + WebSocket |
 | 🔔 Notificaciones | ⏳ Pendiente | Avisos al usuario |
 | 🔐 Seguridad | ⏳ Pendiente | JWT (protocolo de la Fase 9) |
@@ -72,7 +72,7 @@ springbootdemo/
 │   ├── game/              # Módulo de juegos (Fase 2)
 │   ├── library/           # Módulo de biblioteca (Fase 3)
 │   ├── friendship/        # Módulo de amigos (Fase 4)
-│   ├── nickname/          # (próximo)
+│   ├── nickname/          # Módulo de motes (Fase 5)
 │   ├── chat/              # (próximo)
 │   └── notification/      # (próximo)
 └── src/test/kotlin/.../   # Tests de integración (MockMvc)
@@ -185,6 +185,21 @@ La relación es **unidireccional por pareja**: no puede existir a la vez A→B y
 (se comprueba en ambas direcciones). Solo los dos implicados pueden actuar sobre ella
 (solo el destinatario puede aceptar).
 
+## 🔌 API — Fase 5 (Motes)
+
+| Método | Ruta | Descripción | Códigos |
+|--------|------|-------------|---------|
+| PUT | `/api/nicknames/{targetId}` | Poner/actualizar mote (`?userId=`, body `{nickname}`) | 200 · 400 · 404 |
+| GET | `/api/nicknames` | Listar los motes de un usuario | 200 |
+| GET | `/api/nicknames/{targetId}` | Obtener un mote concreto | 200 · 404 |
+| DELETE | `/api/nicknames/{targetId}` | Borrar un mote | 204 · 404 |
+
+Los motes son **privados**: cada usuario tiene su propia lista (clave `owner_id`+`target_id`),
+pueden convivir un mote de A hacia B y otro de B hacia A sin colisión.
+
+**Regla de negocio**: solo se puede poner un mote a un usuario con el que exista una
+relación `ACCEPTED` (en cualquiera de las dos direcciones).
+
 ## 📜 Roadmap
 
 - [x] **Fase 0** — Configuración base (`.env`, estructura de paquetes)
@@ -192,7 +207,7 @@ La relación es **unidireccional por pareja**: no puede existir a la vez A→B y
 - [x] **Fase 2** — 🎮 Juegos (+ tests de integración)
 - [x] **Fase 3** — 📚 Biblioteca (+ tests de integración)
 - [x] **Fase 4** — 👥 Amigos (+ tests de integración)
-- [ ] **Fase 5** — 🏷️ Motes
+- [x] **Fase 5** — 🏷️ Motes (+ tests de integración)
 - [ ] **Fase 6** — 🔎 Búsqueda
 - [ ] **Fase 7** — 💬 Chat (WebSocket)
 - [ ] **Fase 8** — 🔔 Notificaciones

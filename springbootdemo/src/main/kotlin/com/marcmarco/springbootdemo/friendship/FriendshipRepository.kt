@@ -8,6 +8,12 @@ interface FriendshipRepository : JpaRepository<Friendship, Long> {
 
     fun existsByRequesterIdAndAddresseeId(requesterId: Long, addresseeId: Long): Boolean
 
+    fun existsByRequesterIdAndAddresseeIdAndStatus(
+        requesterId: Long,
+        addresseeId: Long,
+        status: FriendshipStatus,
+    ): Boolean
+
     @Query(
         """
         SELECT f FROM Friendship f
