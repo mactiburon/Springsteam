@@ -50,7 +50,7 @@ Cada módulo sigue el patrón **Entity → Repository → Service → Controller
 |--------|--------|-------------|
 | ⚙️ Config | ✅ Hecho | Beans (BCrypt), Security temporal, `.env` |
 | 👤 Usuarios | ✅ Hecho | Registro, login, perfil, búsqueda |
-| 🎮 Juegos | ⏳ Pendiente | Catálogo y filtros |
+| 🎮 Juegos | ✅ Hecho | Catálogo y filtros |
 | 📚 Biblioteca | ⏳ Pendiente | Juegos del usuario, favoritos, horas |
 | 👥 Amigos | ⏳ Pendiente | Solicitudes, bloqueos |
 | 🏷️ Motes | ⏳ Pendiente | Apodos privados entre amigos |
@@ -69,7 +69,7 @@ springbootdemo/
 │   ├── common/exception/  # Excepciones + manejo global de errores
 │   ├── user/              # Módulo de usuarios (Fase 1)
 │   │   └── dto/           # Request/Response (nunca exponen password)
-│   ├── game/              # (próximo)
+│   ├── game/              # Módulo de juegos (Fase 2)
 │   ├── library/           # (próximo)
 │   ├── friendship/        # (próximo)
 │   ├── nickname/          # (próximo)
@@ -134,11 +134,27 @@ Respuestas de error con formato uniforme:
 - La contraseña **jamás aparece en ninguna respuesta** de la API.
 - Login con credenciales inválidas devuelve el mismo mensaje (no revela qué falló).
 
+## 🔌 API — Fase 2 (Juegos)
+
+| Método | Ruta | Descripción | Códigos |
+|--------|------|-------------|---------|
+| POST | `/api/games` | Crear juego | 201 · 400 · 409 |
+| GET | `/api/games` | Listar/buscar con filtros | 200 |
+| GET | `/api/games/{id}` | Juego por id | 200 · 404 |
+| PUT | `/api/games/{id}` | Actualizar juego (todos los campos) | 200 · 404 · 409 |
+| DELETE | `/api/games/{id}` | Borrar juego | 204 · 404 |
+
+**Filtros de búsqueda** (combinables, todos opcionales):
+`?name=` · `?genre=` · `?developer=` · `?publisher=` · `?releaseDateFrom=AAAA-MM-DD` · `?releaseDateTo=AAAA-MM-DD`
+
+La búsqueda es *case-insensitive* y parcial (contiene el texto), con una sola
+consulta JPQL parametrizada que ignora los filtros vacíos (`IS NULL OR LIKE`).
+
 ## 📜 Roadmap
 
 - [x] **Fase 0** — Configuración base (`.env`, estructura de paquetes)
 - [x] **Fase 1** — 👤 Usuarios (+ tests de integración)
-- [ ] **Fase 2** — 🎮 Juegos
+- [x] **Fase 2** — 🎮 Juegos (+ tests de integración)
 - [ ] **Fase 3** — 📚 Biblioteca
 - [ ] **Fase 4** — 👥 Amigos
 - [ ] **Fase 5** — 🏷️ Motes
