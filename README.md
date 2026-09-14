@@ -52,7 +52,7 @@ Cada módulo sigue el patrón **Entity → Repository → Service → Controller
 | 👤 Usuarios | ✅ Hecho | Registro, login, perfil, búsqueda |
 | 🎮 Juegos | ✅ Hecho | Catálogo y filtros |
 | 📚 Biblioteca | ✅ Hecho | Juegos del usuario, favoritos, horas |
-| 👥 Amigos | ⏳ Pendiente | Solicitudes, bloqueos |
+| 👥 Amigos | ✅ Hecho | Solicitudes, aceptar, bloquear |
 | 🏷️ Motes | ⏳ Pendiente | Apodos privados entre amigos |
 | 💬 Chat | ⏳ Pendiente | Conversaciones + WebSocket |
 | 🔔 Notificaciones | ⏳ Pendiente | Avisos al usuario |
@@ -71,7 +71,7 @@ springbootdemo/
 │   │   └── dto/           # Request/Response (nunca exponen password)
 │   ├── game/              # Módulo de juegos (Fase 2)
 │   ├── library/           # Módulo de biblioteca (Fase 3)
-│   ├── friendship/        # (próximo)
+│   ├── friendship/        # Módulo de amigos (Fase 4)
 │   ├── nickname/          # (próximo)
 │   ├── chat/              # (próximo)
 │   └── notification/      # (próximo)
@@ -168,13 +168,30 @@ Todos los endpoints llevan `?userId=` como parámetro requerido (hasta la Fase 9
 La respuesta incluye el objeto `game` anidado con los datos del juego. Las horas son
 un `Double` (soporta decimales para sesiones parciales).
 
+## 🔌 API — Fase 4 (Amigos)
+
+| Método | Ruta | Descripción | Códigos |
+|--------|------|-------------|---------|
+| POST | `/api/friendships` | Enviar solicitud (`requesterId`, `addresseeId`) | 201 · 400 · 404 · 409 |
+| GET | `/api/friendships` | Listar relaciones de un usuario | 200 |
+| GET | `/api/friendships/{id}` | Detalle de una relación | 200 · 404 |
+| PUT | `/api/friendships/{id}/accept` | Aceptar solicitud (`?userId=` del destinatario) | 200 · 400 · 404 · 409 |
+| PUT | `/api/friendships/{id}/block` | Bloquear al otro usuario | 200 · 400 · 404 |
+| DELETE | `/api/friendships/{id}` | Eliminar relación (cancelar/desamistar) | 204 · 400 · 404 |
+
+**Estados**: `PENDING` → `ACCEPTED` → (bloquear) `BLOCKED`.
+
+La relación es **unidireccional por pareja**: no puede existir a la vez A→B y B→A
+(se comprueba en ambas direcciones). Solo los dos implicados pueden actuar sobre ella
+(solo el destinatario puede aceptar).
+
 ## 📜 Roadmap
 
 - [x] **Fase 0** — Configuración base (`.env`, estructura de paquetes)
 - [x] **Fase 1** — 👤 Usuarios (+ tests de integración)
 - [x] **Fase 2** — 🎮 Juegos (+ tests de integración)
 - [x] **Fase 3** — 📚 Biblioteca (+ tests de integración)
-- [ ] **Fase 4** — 👥 Amigos
+- [x] **Fase 4** — 👥 Amigos (+ tests de integración)
 - [ ] **Fase 5** — 🏷️ Motes
 - [ ] **Fase 6** — 🔎 Búsqueda
 - [ ] **Fase 7** — 💬 Chat (WebSocket)

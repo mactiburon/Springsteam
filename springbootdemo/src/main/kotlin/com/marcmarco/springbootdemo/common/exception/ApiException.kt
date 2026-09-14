@@ -12,3 +12,5 @@ class NotFoundException(message: String) : ApiException(HttpStatus.NOT_FOUND, me
 class ConflictException(message: String) : ApiException(HttpStatus.CONFLICT, message)
 
 class InvalidCredentialsException(message: String) : ApiException(HttpStatus.UNAUTHORIZED, message)
+
+class BadRequestException(message: String) : ApiException(HttpStatus.BAD_REQUEST, message)
