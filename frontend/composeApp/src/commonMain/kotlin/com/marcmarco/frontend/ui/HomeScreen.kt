@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,7 +17,9 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun HomeScreen(
-    session: Session?,
+    session: Session,
+    onOpenUsers: () -> Unit,
+    onOpenProfile: () -> Unit,
     onLogout: () -> Unit,
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -26,16 +29,16 @@ fun HomeScreen(
                 .padding(32.dp),
         ) {
             Text(
-                text = "Hola, ${session?.user?.displayName ?: session?.user?.username}",
+                text = "Hola, ${session.user.displayName ?: session.user.username}",
                 style = MaterialTheme.typography.headlineMedium,
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "@${session?.user?.username}",
+                text = "@${session.user.username}",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
-            Text(session?.user?.email.orEmpty(), style = MaterialTheme.typography.bodyMedium)
+            Text(session.user.email, style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(20.dp))
             Surface(
                 color = MaterialTheme.colorScheme.surfaceVariant,
@@ -45,19 +48,21 @@ fun HomeScreen(
                     Text("Sesión JWT activa", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "Expira en ${(session?.expiresIn ?: 0) / 3600} horas",
+                        text = "Expira en ${session.expiresIn / 3600} horas",
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
             }
             Spacer(Modifier.weight(1f))
-            Text(
-                text = "Próxima fase: 🎮 catálogo de juegos",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Button(onClick = onOpenUsers, modifier = Modifier.fillMaxWidth()) {
+                Text("Ver usuarios")
+            }
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = onOpenProfile, modifier = Modifier.fillMaxWidth()) {
+                Text("Mi perfil")
+            }
             Spacer(Modifier.height(16.dp))
-            Button(onClick = onLogout, modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(onClick = onLogout, modifier = Modifier.fillMaxWidth()) {
                 Text("Cerrar sesión")
             }
         }

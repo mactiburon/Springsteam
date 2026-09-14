@@ -8,40 +8,47 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.marcmarco.frontend.api.AuthApi
+import com.marcmarco.frontend.api.dto.UserResponse
+import com.marcmarco.frontend.ui.Screen.Login
+import com.marcmarco.frontend.ui.Screen.Main
+import com.marcmarco.frontend.ui.Screen.Register
 
 @Composable
 fun App() {
     MaterialTheme(colorScheme = darkColorScheme()) {
         val authApi = remember { AuthApi() }
         var session by remember { mutableStateOf<Session?>(null) }
-        var screen by remember { mutableStateOf<Screen>(Screen.Login) }
+        var screen by remember { mutableStateOf<Screen>(Login) }
 
         when (screen) {
-            Screen.Login -> LoginScreen(
+            Login -> LoginScreen(
                 authApi = authApi,
                 onLoggedIn = {
                     session = it
-                    screen = Screen.Home
+                    screen = Main
                 },
-                onGoToRegister = { screen = Screen.Register },
+                onGoToRegister = { screen = Register },
             )
 
-            Screen.Register -> RegisterScreen(
+            Register -> RegisterScreen(
                 authApi = authApi,
                 onLoggedIn = {
                     session = it
-                    screen = Screen.Home
+                    screen = Main
                 },
-                onGoToLogin = { screen = Screen.Login },
+                onGoToLogin = { screen = Login },
             )
 
-            Screen.Home -> HomeScreen(
-                session = session,
-                onLogout = {
-                    session = null
-                    screen = Screen.Login
-                },
-            )
+            Main -> session?.let { current ->
+                MainContent(
+                    session = current,
+                    onProfileUpdated = { updated: UserResponse -> session = session?.copy(user = updated) },
+                    onLogout = {
+                        session = null
+                        screen = Login
+                    },
+                )
+            }
         }
     }
 }

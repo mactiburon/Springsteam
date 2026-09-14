@@ -369,7 +369,7 @@ Todos los endpoints exigen `Bearer` (el usuario se identifica por el `sub` del J
 |------|--------|--------|-------------|
 | F0 | Andamiaje | ✅ Hecho | Scaffold Compose Multiplatform (Desktop JVM), Material 3, cliente Ktor, estructura |
 | F1 | 🔐 Autenticación | ✅ Hecho | Registro + login, sesión con JWT (pantallas Login/Register/Home) |
-| F2 | 👤 Usuarios | ⏳ Pendiente | Perfil propio/ajeno, listado y búsqueda de usuarios |
+| F2 | 👤 Usuarios | ✅ Hecho | Listado + búsqueda, perfil propio editable (`PUT /api/users/me`) y perfil ajeno |
 | F3 | 🎮 Juegos | ⏳ Pendiente | Catálogo con filtros y detalle |
 | F4 | 📚 Biblioteca | ⏳ Pendiente | Mi colección: añadir, favoritos, horas |
 | F5 | 👥 Amigos | ⏳ Pendiente | Solicitudes, aceptar, bloquear |
@@ -393,7 +393,8 @@ Todos los endpoints exigen `Bearer` (el usuario se identifica por el `sub` del J
 - [x] **Fase 10** — ⚙️ Configuración de cuenta
 - [x] **F0** — Frontend: andamiaje Compose Multiplatform
 - [x] **F1** — Frontend: 🔐 Autenticación (registro + login + JWT)
-- [ ] **F2–F9** — Frontend: usuarios, juegos, biblioteca, amigos, motes, búsqueda, chat, notificaciones
+- [x] **F2** — Frontend: 👤 Usuarios (listado, búsqueda y perfil)
+- [ ] **F3–F9** — Frontend: juegos, biblioteca, amigos, motes, búsqueda, chat, notificaciones
 - [ ] **Etapa 2** — 🐳 Docker (backend + frontend web)
 - [ ] **Etapa 3** — 📨 Kafka
 - [ ] **Etapa 4** — 🔴 Microservicios
