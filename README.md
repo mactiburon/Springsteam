@@ -1,8 +1,9 @@
 # 🎮 Spring Boot Demo — Plataforma de Juegos
 
 Plataforma de juegos estilo Steam construida con **Spring Boot + Kotlin + PostgreSQL (Supabase)**.
-Backend 100% API REST. Objetivo de aprendizaje: Spring Boot, JPA/Hibernate, WebSockets, y más adelante
-Docker, Kafka y microservicios.
+Backend 100% API REST y **frontend de escritorio en Compose Multiplatform (Material 3)**.
+Objetivo de aprendizaje: Spring Boot, JPA/Hibernate, WebSockets, y más adelante
+Compose Multiplatform, Docker, Kafka y microservicios.
 
 ## 🧱 Stack tecnológico
 
@@ -14,6 +15,8 @@ Docker, Kafka y microservicios.
 | Base de datos | PostgreSQL (Supabase) en dev · H2 en memoria en tests |
 | Seguridad | Spring Security (BCrypt) + JWT HS256 (Fase 9) |
 | Tests | JUnit 5 + MockMvc |
+| Frontend | Compose Multiplatform (Material 3, KMP Desktop JVM) |
+| HTTP cliente | Ktor (frontend) + kotlinx.serialization |
 
 ## 🗺️ Arquitectura y evolución
 
@@ -81,6 +84,21 @@ springbootdemo/
 │   │   └── dto/           # Response de notificaciones
 │   └── security/          # JWT (Fase 9): encoder/decoder, login y auth STOMP
 └── src/test/kotlin/.../   # Tests de integración (MockMvc)
+
+frontend/
+├── settings.gradle.kts
+├── build.gradle.kts
+├── gradle/libs.versions.toml
+└── composeApp/
+    ├── build.gradle.kts
+    └── src/
+        ├── commonMain/kotlin/com/marcmarco/frontend/
+        │   ├── App.kt                # Tema + navegación
+        │   ├── ui/                   # Pantallas (Login, Register, Home)
+        │   ├── api/                  # Cliente HTTP Ktor + AuthApi + DTOs
+        │   └── config/               # URL de la API
+        ├── desktopMain/kotlin/.../Main.kt   # Entry point de escritorio
+        └── commonTest/kotlin/.../    # Tests comunes (MockEngine)
 ```
 
 ## 🚀 Puesta en marcha
@@ -115,6 +133,19 @@ La app arranca en `http://localhost:8080`.
 cd springbootdemo
 .\gradlew.bat test
 ```
+
+### 4. Frontend (dev)
+El frontend es un proyecto Gradle independiente en `frontend/`. Con el backend arrancado
+en `http://localhost:8080`:
+
+```powershell
+cd frontend
+.\gradlew.bat :composeApp:run        # lanza la app de escritorio
+.\gradlew.bat :composeApp:desktopTest # tests comunes (MockEngine, sin red)
+```
+
+> 📌 El JWT se mantiene en memoria (no persistido todavía). En la Etapa Docker el frontend
+> pasará a target web para servirlo junto al backend.
 
 Los tests usan **H2 en memoria en modo PostgreSQL** (sin depender de la red/Supabase) y
 cada caso revierte su transacción, así que son reproducibles indefinidamente.
@@ -332,6 +363,21 @@ Todos los endpoints exigen `Bearer` (el usuario se identifica por el `sub` del J
 - Las operaciones no invalidan el token anterior; pero una cuenta desactivada deja de
   aparecer en listados/búsquedas y no puede iniciar sesión.
 
+## 🎨 Frontend — Roadmap (Compose Multiplatform)
+
+| Fase | Módulo | Estado | Descripción |
+|------|--------|--------|-------------|
+| F0 | Andamiaje | ✅ Hecho | Scaffold Compose Multiplatform (Desktop JVM), Material 3, cliente Ktor, estructura |
+| F1 | 🔐 Autenticación | ✅ Hecho | Registro + login, sesión con JWT (pantallas Login/Register/Home) |
+| F2 | 👤 Usuarios | ⏳ Pendiente | Perfil propio/ajeno, listado y búsqueda de usuarios |
+| F3 | 🎮 Juegos | ⏳ Pendiente | Catálogo con filtros y detalle |
+| F4 | 📚 Biblioteca | ⏳ Pendiente | Mi colección: añadir, favoritos, horas |
+| F5 | 👥 Amigos | ⏳ Pendiente | Solicitudes, aceptar, bloquear |
+| F6 | 🏷️ Motes | ⏳ Pendiente | Apodos privados entre amigos |
+| F7 | 🔎 Búsqueda | ⏳ Pendiente | Búsqueda global + sugerencias |
+| F8 | 💬 Chat | ⏳ Pendiente | Conversaciones + WebSocket (STOMP) en Compose |
+| F9 | 🔔 Notif. + ⚙️ Config. | ⏳ Pendiente | Bandeja, cambiar credenciales, desactivar cuenta |
+
 ## 📜 Roadmap
 
 - [x] **Fase 0** — Configuración base (`.env`, estructura de paquetes)
@@ -345,6 +391,9 @@ Todos los endpoints exigen `Bearer` (el usuario se identifica por el `sub` del J
 - [x] **Fase 8** — 🔔 Notificaciones (+ tests de integración)
 - [x] **Fase 9** — 🔐 Seguridad (JWT)
 - [x] **Fase 10** — ⚙️ Configuración de cuenta
-- [ ] **Etapa 2** — 🐳 Docker
+- [x] **F0** — Frontend: andamiaje Compose Multiplatform
+- [x] **F1** — Frontend: 🔐 Autenticación (registro + login + JWT)
+- [ ] **F2–F9** — Frontend: usuarios, juegos, biblioteca, amigos, motes, búsqueda, chat, notificaciones
+- [ ] **Etapa 2** — 🐳 Docker (backend + frontend web)
 - [ ] **Etapa 3** — 📨 Kafka
 - [ ] **Etapa 4** — 🔴 Microservicios
