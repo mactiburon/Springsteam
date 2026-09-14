@@ -6,21 +6,24 @@ import org.springframework.data.repository.query.Param
 
 interface UserRepository : JpaRepository<User, Long> {
 
-    fun findByUsername(username: String): User?
+    fun findByUsernameAndActiveTrue(username: String): User?
 
-    fun findByEmail(email: String): User?
+    fun findByEmailAndActiveTrue(email: String): User?
 
     fun existsByUsername(username: String): Boolean
 
     fun existsByEmail(email: String): Boolean
 
-    fun findByUsernameContainingIgnoreCase(username: String): List<User>
+    fun findByUsernameContainingIgnoreCaseAndActiveTrue(username: String): List<User>
+
+    fun findAllByActiveTrue(): List<User>
 
     @Query(
         """
         SELECT u FROM User u
-        WHERE LOWER(u.username) LIKE LOWER(CONCAT('%', :q, '%'))
-           OR LOWER(u.displayName) LIKE LOWER(CONCAT('%', :q, '%'))
+        WHERE u.active = true
+          AND (LOWER(u.username) LIKE LOWER(CONCAT('%', :q, '%'))
+               OR LOWER(u.displayName) LIKE LOWER(CONCAT('%', :q, '%')))
         ORDER BY u.username
         """
     )

@@ -29,8 +29,8 @@ class AuthService(
      * contraseña falla, para no revelar qué dato era el erróneo.
      */
     fun login(request: LoginRequest): LoginResponse {
-        val user = userRepository.findByUsername(request.identifier)
-            ?: userRepository.findByEmail(request.identifier)
+        val user = userRepository.findByUsernameAndActiveTrue(request.identifier)
+            ?: userRepository.findByEmailAndActiveTrue(request.identifier)
             ?: throw InvalidCredentialsException("Credenciales incorrectas")
 
         if (!passwordEncoder.matches(request.password, user.password)) {

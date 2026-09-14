@@ -58,7 +58,7 @@ Cada módulo sigue el patrón **Entity → Repository → Service → Controller
 | 💬 Chat | ✅ Hecho | Conversaciones + mensajería WebSocket |
 | 🔔 Notificaciones | ✅ Hecho | Avisos generados por amigos y chat |
 | 🔐 Seguridad | ✅ Hecho | Registro/login con JWT HS256 y endpoints protegidos |
-| ⚙️ Configuración | ⏳ Pendiente | Ajustes de cuenta |
+| ⚙️ Configuración | ✅ Hecho | Cambiar contraseña, email, username y desactivar cuenta |
 
 ## 📁 Estructura del proyecto
 
@@ -313,6 +313,25 @@ El *handshake* `/ws` y el frame STOMP `CONNECT` deben llevar la cabecera
 `Authorization: Bearer <token>`; la sesión queda autenticada y el autor de cada mensaje
 se toma del JWT.
 
+## 🔌 API — Fase 10 (Configuración de cuenta)
+
+Todos los endpoints exigen `Bearer` (el usuario se identifica por el `sub` del JWT):
+
+| Método | Ruta | Descripción | Códigos |
+|--------|------|-------------|---------|
+| PUT | `/api/users/me/password` | Cambiar contraseña (body `{currentPassword, newPassword}`) | 200 · 400 · 401 |
+| PUT | `/api/users/me/email` | Cambiar email (body `{email}`) | 200 · 400 · 409 · 401 |
+| PUT | `/api/users/me/username` | Cambiar username (body `{username}`) | 200 · 400 · 409 · 401 |
+| DELETE | `/api/users/me/account` | Desactivar cuenta (body `{password}`) | 204 · 400 · 401 |
+
+- Cambiar contraseña exige la actual correcta; la nueva debe ser distinta y de ≥ 6 caracteres.
+- Cambiar email/username a un valor ya usado por **otro** usuario devuelve `409`; conservar
+  el propio valor no se considera conflicto.
+- Desactivar la cuenta es un **soft-delete**: la fila persiste (`active = false`), el login
+  queda bloqueado y el perfil público deja de existir (`404`).
+- Las operaciones no invalidan el token anterior; pero una cuenta desactivada deja de
+  aparecer en listados/búsquedas y no puede iniciar sesión.
+
 ## 📜 Roadmap
 
 - [x] **Fase 0** — Configuración base (`.env`, estructura de paquetes)
@@ -325,7 +344,7 @@ se toma del JWT.
 - [x] **Fase 7** — 💬 Chat (WebSocket) (+ tests de integración)
 - [x] **Fase 8** — 🔔 Notificaciones (+ tests de integración)
 - [x] **Fase 9** — 🔐 Seguridad (JWT)
-- [ ] **Fase 10** — ⚙️ Configuración de cuenta
+- [x] **Fase 10** — ⚙️ Configuración de cuenta
 - [ ] **Etapa 2** — 🐳 Docker
 - [ ] **Etapa 3** — 📨 Kafka
 - [ ] **Etapa 4** — 🔴 Microservicios

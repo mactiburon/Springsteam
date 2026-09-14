@@ -30,6 +30,9 @@ class User(
 
     var avatar: String? = null,
 
+    @Column(nullable = false)
+    var active: Boolean = true,
+
     @Column(updatable = false)
     val createdAt: Instant = Instant.now(),
 )

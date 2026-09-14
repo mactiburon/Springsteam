@@ -10,6 +10,7 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
@@ -258,5 +259,253 @@ class UserControllerIntegrationTest {
         mockMvc.perform(get("/api/users").param("username", "no_existe_$suffix"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.length()").value(0))
+    }
+
+    // ===== Cambiar contraseña =====
+
+    @Test
+    fun `cambiar password permite login con la nueva y rechaza la antigua`() {
+        val username = uniqueUser()
+        register(username, uniqueEmail(), "secreto123")
+        val token = loginToken(username)
+        val body = jsonBody(mapOf("currentPassword" to "secreto123", "newPassword" to "nuevaClave6"))
+        mockMvc.perform(
+            put("/api/users/me/password")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body),
+        )
+            .andExpect(status().isOk)
+
+        val oldLogin = jsonBody(mapOf("identifier" to username, "password" to "secreto123"))
+        mockMvc.perform(post("/api/users/login").contentType(MediaType.APPLICATION_JSON).content(oldLogin))
+            .andExpect(status().isUnauthorized)
+
+        val newLogin = jsonBody(mapOf("identifier" to username, "password" to "nuevaClave6"))
+        mockMvc.perform(post("/api/users/login").contentType(MediaType.APPLICATION_JSON).content(newLogin))
+            .andExpect(status().isOk)
+    }
+
+    @Test
+    fun `cambiar password con la actual incorrecta devuelve 400`() {
+        val username = uniqueUser()
+        register(username, uniqueEmail(), "secreto123")
+        val token = loginToken(username)
+        val body = jsonBody(mapOf("currentPassword" to "incorrecta", "newPassword" to "nuevaClave6"))
+        mockMvc.perform(
+            put("/api/users/me/password")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").value("La contraseña actual no es correcta"))
+    }
+
+    @Test
+    fun `cambiar password con la nueva igual a la actual devuelve 400`() {
+        val username = uniqueUser()
+        register(username, uniqueEmail(), "secreto123")
+        val token = loginToken(username)
+        val body = jsonBody(mapOf("currentPassword" to "secreto123", "newPassword" to "secreto123"))
+        mockMvc.perform(
+            put("/api/users/me/password")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").value("La nueva contraseña debe ser diferente de la actual"))
+    }
+
+    @Test
+    fun `cambiar password con la nueva demasiado corta devuelve 400`() {
+        val username = uniqueUser()
+        register(username, uniqueEmail(), "secreto123")
+        val token = loginToken(username)
+        val body = jsonBody(mapOf("currentPassword" to "secreto123", "newPassword" to "123"))
+        mockMvc.perform(
+            put("/api/users/me/password")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body),
+        )
+            .andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `cambiar password sin token devuelve 401`() {
+        val body = jsonBody(mapOf("currentPassword" to "secreto123", "newPassword" to "nuevaClave6"))
+        mockMvc.perform(put("/api/users/me/password").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isUnauthorized)
+    }
+
+    // ===== Actualizar email =====
+
+    @Test
+    fun `actualizar email devuelve 200 con el nuevo email`() {
+        val username = uniqueUser()
+        register(username, uniqueEmail())
+        val token = loginToken(username)
+        val newEmail = "nuevo_$suffix@test.com"
+        val body = jsonBody(mapOf("email" to newEmail))
+        mockMvc.perform(
+            put("/api/users/me/email")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.email").value(newEmail))
+    }
+
+    @Test
+    fun `actualizar email a uno ya usado por otro usuario devuelve 409`() {
+        val takenEmail = uniqueEmail()
+        register("owner_$suffix", takenEmail)
+        val username = uniqueUser()
+        register(username, "otro_$suffix@test.com")
+        val token = loginToken(username)
+        val body = jsonBody(mapOf("email" to takenEmail))
+        mockMvc.perform(
+            put("/api/users/me/email")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body),
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.message").value("El email '$takenEmail' ya está registrado"))
+    }
+
+    @Test
+    fun `actualizar email al propio deja la cuenta intacta`() {
+        val username = uniqueUser()
+        val email = uniqueEmail()
+        register(username, email)
+        val token = loginToken(username)
+        val body = jsonBody(mapOf("email" to email))
+        mockMvc.perform(
+            put("/api/users/me/email")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.email").value(email))
+    }
+
+    @Test
+    fun `actualizar email con formato invalido devuelve 400`() {
+        val username = uniqueUser()
+        register(username, uniqueEmail())
+        val token = loginToken(username)
+        val body = jsonBody(mapOf("email" to "correo-malo"))
+        mockMvc.perform(
+            put("/api/users/me/email")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body),
+        )
+            .andExpect(status().isBadRequest)
+    }
+
+    // ===== Actualizar username =====
+
+    @Test
+    fun `actualizar username devuelve 200 con el nuevo username`() {
+        val username = uniqueUser()
+        register(username, uniqueEmail())
+        val token = loginToken(username)
+        val newUsername = "nuevo_$suffix"
+        val body = jsonBody(mapOf("username" to newUsername))
+        mockMvc.perform(
+            put("/api/users/me/username")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.username").value(newUsername))
+    }
+
+    @Test
+    fun `actualizar username a uno ya usado por otro usuario devuelve 409`() {
+        val takenUsername = "owner_$suffix"
+        register(takenUsername, "owner_$suffix@test.com")
+        val username = uniqueUser()
+        register(username, uniqueEmail())
+        val token = loginToken(username)
+        val body = jsonBody(mapOf("username" to takenUsername))
+        mockMvc.perform(
+            put("/api/users/me/username")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body),
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.message").value("El username '$takenUsername' ya está en uso"))
+    }
+
+    @Test
+    fun `actualizar username al propio deja la cuenta intacta`() {
+        val username = uniqueUser()
+        register(username, uniqueEmail())
+        val token = loginToken(username)
+        val body = jsonBody(mapOf("username" to username))
+        mockMvc.perform(
+            put("/api/users/me/username")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.username").value(username))
+    }
+
+    // ===== Desactivar cuenta =====
+
+    @Test
+    fun `desactivar cuenta con password correcta devuelve 204 y bloquea login y perfil`() {
+        val username = uniqueUser()
+        val id = register(username, uniqueEmail())
+        val token = loginToken(username)
+        val body = jsonBody(mapOf("password" to "secreto123"))
+        mockMvc.perform(
+            delete("/api/users/me/account")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body),
+        )
+            .andExpect(status().isNoContent)
+
+        val loginBody = jsonBody(mapOf("identifier" to username, "password" to "secreto123"))
+        mockMvc.perform(post("/api/users/login").contentType(MediaType.APPLICATION_JSON).content(loginBody))
+            .andExpect(status().isUnauthorized)
+
+        mockMvc.perform(get("/api/users/$id"))
+            .andExpect(status().isNotFound)
+    }
+
+    @Test
+    fun `desactivar cuenta con password incorrecta devuelve 400`() {
+        val username = uniqueUser()
+        register(username, uniqueEmail())
+        val token = loginToken(username)
+        val body = jsonBody(mapOf("password" to "incorrecta"))
+        mockMvc.perform(
+            delete("/api/users/me/account")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").value("La contraseña no es correcta para eliminar la cuenta"))
+    }
+
+    @Test
+    fun `desactivar cuenta sin token devuelve 401`() {
+        val body = jsonBody(mapOf("password" to "secreto123"))
+        mockMvc.perform(delete("/api/users/me/account").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isUnauthorized)
     }
 }
