@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.marcmarco.frontend.api.GameApi
+import com.marcmarco.frontend.api.LibraryApi
 import com.marcmarco.frontend.api.UserApi
 import com.marcmarco.frontend.api.dto.UserResponse
 
@@ -31,6 +32,7 @@ fun MainContent(
 ) {
     val userApi = remember { UserApi() }
     val gameApi = remember { GameApi() }
+    val libraryApi = remember { LibraryApi() }
     var section by remember { mutableStateOf<MainSection>(MainSection.Home) }
 
     Scaffold(
@@ -45,6 +47,7 @@ fun MainContent(
                     BottomNavItem("Inicio", section == MainSection.Home) { section = MainSection.Home }
                     BottomNavItem("Usuarios", section == MainSection.Users) { section = MainSection.Users }
                     BottomNavItem("Juegos", section == MainSection.Games) { section = MainSection.Games }
+                    BottomNavItem("Biblioteca", section == MainSection.Library) { section = MainSection.Library }
                     BottomNavItem("Perfil", section == MainSection.Profile) { section = MainSection.Profile }
                 }
             }
@@ -56,6 +59,7 @@ fun MainContent(
                     session = session,
                     onOpenUsers = { section = MainSection.Users },
                     onOpenGames = { section = MainSection.Games },
+                    onOpenLibrary = { section = MainSection.Library },
                     onOpenProfile = { section = MainSection.Profile },
                     onLogout = onLogout,
                 )
@@ -67,6 +71,13 @@ fun MainContent(
                 )
 
                 MainSection.Games -> GamesScreen(
+                    gameApi = gameApi,
+                    token = session.token,
+                    onOpenGame = { section = MainSection.GameDetail(it) },
+                )
+
+                MainSection.Library -> LibraryScreen(
+                    libraryApi = libraryApi,
                     gameApi = gameApi,
                     token = session.token,
                     onOpenGame = { section = MainSection.GameDetail(it) },

@@ -380,7 +380,7 @@ Todos los endpoints exigen `Bearer` (el usuario se identifica por el `sub` del J
 | F1 | 🔐 Autenticación | ✅ Hecho | Registro + login, sesión con JWT (pantallas Login/Register/Home) |
 | F2 | 👤 Usuarios | ✅ Hecho | Listado + búsqueda, perfil propio editable (`PUT /api/users/me`) y perfil ajeno |
 | F3 | 🎮 Juegos | ✅ Hecho | Catálogo con filtros (nombre, género, desarrollador, publisher, fechas) y detalle |
-| F4 | 📚 Biblioteca | ⏳ Pendiente | Mi colección: añadir, favoritos, horas |
+| F4 | 📚 Biblioteca | ✅ Hecho | Mi colección: añadir desde el catálogo, favoritos, horas, quitar |
 | F5 | 👥 Amigos | ⏳ Pendiente | Solicitudes, aceptar, bloquear |
 | F6 | 🏷️ Motes | ⏳ Pendiente | Apodos privados entre amigos |
 | F7 | 🔎 Búsqueda | ⏳ Pendiente | Búsqueda global + sugerencias |
@@ -404,7 +404,8 @@ Todos los endpoints exigen `Bearer` (el usuario se identifica por el `sub` del J
 - [x] **F1** — Frontend: 🔐 Autenticación (registro + login + JWT)
 - [x] **F2** — Frontend: 👤 Usuarios (listado, búsqueda y perfil)
 - [x] **F3** — Frontend: 🎮 Juegos (catálogo con filtros y detalle)
-- [ ] **F4–F9** — Frontend: biblioteca, amigos, motes, búsqueda, chat, notificaciones
+- [x] **F4** — Frontend: 📚 Biblioteca (añadir, favoritos, horas)
+- [ ] **F5–F9** — Frontend: amigos, motes, búsqueda, chat, notificaciones
 - [ ] **Etapa 2** — 🐳 Docker (backend + frontend web)
 - [ ] **Etapa 3** — 📨 Kafka
 - [ ] **Etapa 4** — 🔴 Microservicios

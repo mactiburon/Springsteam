@@ -20,6 +20,7 @@ fun HomeScreen(
     session: Session,
     onOpenUsers: () -> Unit,
     onOpenGames: () -> Unit,
+    onOpenLibrary: () -> Unit,
     onOpenProfile: () -> Unit,
     onLogout: () -> Unit,
 ) {
@@ -61,6 +62,10 @@ fun HomeScreen(
             Spacer(Modifier.height(8.dp))
             Button(onClick = onOpenGames, modifier = Modifier.fillMaxWidth()) {
                 Text("Ver juegos")
+            }
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = onOpenLibrary, modifier = Modifier.fillMaxWidth()) {
+                Text("Mi biblioteca")
             }
             Spacer(Modifier.height(8.dp))
             Button(onClick = onOpenProfile, modifier = Modifier.fillMaxWidth()) {
