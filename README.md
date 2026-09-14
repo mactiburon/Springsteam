@@ -56,7 +56,7 @@ Cada módulo sigue el patrón **Entity → Repository → Service → Controller
 | 🏷️ Motes | ✅ Hecho | Apodos privados entre amigos |
 | 🔎 Búsqueda | ✅ Hecho | Búsqueda global + autocompletado |
 | 💬 Chat | ✅ Hecho | Conversaciones + mensajería WebSocket |
-| 🔔 Notificaciones | ⏳ Pendiente | Avisos al usuario |
+| 🔔 Notificaciones | ✅ Hecho | Avisos generados por amigos y chat |
 | 🔐 Seguridad | ⏳ Pendiente | JWT (protocolo de la Fase 9) |
 | ⚙️ Configuración | ⏳ Pendiente | Ajustes de cuenta |
 
@@ -77,7 +77,9 @@ springbootdemo/
 │   ├── search/            # Módulo de búsqueda global (Fase 6)
 │   ├── chat/              # Conversaciones + WebSocket (Fase 7)
 │   │   └── dto/           # Request/Response del chat
-│   └── notification/      # (próximo)
+│   ├── notification/      # Notificaciones (Fase 8)
+│   │   └── dto/           # Response de notificaciones
+│   └── (próximos)         # seguridad, configuración
 └── src/test/kotlin/.../   # Tests de integración (MockMvc)
 ```
 
@@ -245,6 +247,29 @@ Cada mensaje se **persiste antes** de notificar, así que quien se conecte despu
 recuperar el historial por REST. El broadcast llega a todos los suscritos al topic de la
 conversación.
 
+## 🔌 API — Fase 8 (Notificaciones)
+
+| Método | Ruta | Descripción | Códigos |
+|--------|------|-------------|---------|
+| GET | `/api/notifications?userId=` | Listar notificaciones (más recientes primero) | 200 · 404 |
+| GET | `/api/notifications/unread-count?userId=` | Nº de no leídas `{ "count": n }` | 200 · 404 |
+| GET | `/api/notifications/{id}?userId=` | Detalle de una notificación (solo destinatario) | 200 · 404 |
+| PUT | `/api/notifications/{id}/read?userId=` | Marcar como leída | 200 · 404 |
+| PUT | `/api/notifications/read-all?userId=` | Marcar todas como leídas | 200 · 404 |
+| DELETE | `/api/notifications/{id}?userId=` | Eliminar una notificación | 204 · 404 |
+
+Las notificaciones **no se crean por API**: las genera el sistema de forma automática y
+transaccional cuando ocurre un evento:
+
+- `FRIEND_REQUEST` → al enviar una solicitud de amistad (al destinatario)
+- `FRIEND_ACCEPTED` → al aceptar una solicitud (al solicitante)
+- `NEW_MESSAGE` → al enviar un mensaje en una conversación (al otro participante)
+
+Cada notificación incluye `type`, `message` legible, `actor` (quién la causó),
+`referenceId` (id del recurso relacionado) y el flag `read`. Comprobar el estado de
+lectura se hace contra la propia notificación: solo el destinatario puede verla,
+marcarla como leída o borrarla (un tercero obtiene `404`).
+
 ## 📜 Roadmap
 
 - [x] **Fase 0** — Configuración base (`.env`, estructura de paquetes)
@@ -255,7 +280,7 @@ conversación.
 - [x] **Fase 5** — 🏷️ Motes (+ tests de integración)
 - [x] **Fase 6** — 🔎 Búsqueda (+ tests de integración)
 - [x] **Fase 7** — 💬 Chat (WebSocket) (+ tests de integración)
-- [ ] **Fase 8** — 🔔 Notificaciones
+- [x] **Fase 8** — 🔔 Notificaciones (+ tests de integración)
 - [ ] **Fase 9** — 🔐 Seguridad (JWT)
 - [ ] **Fase 10** — ⚙️ Configuración de cuenta
 - [ ] **Etapa 2** — 🐳 Docker

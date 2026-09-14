@@ -4,6 +4,8 @@ import com.marcmarco.springbootdemo.common.exception.BadRequestException
 import com.marcmarco.springbootdemo.common.exception.ConflictException
 import com.marcmarco.springbootdemo.common.exception.NotFoundException
 import com.marcmarco.springbootdemo.friendship.dto.FriendshipRequest
+import com.marcmarco.springbootdemo.notification.NotificationService
+import com.marcmarco.springbootdemo.notification.NotificationType
 import com.marcmarco.springbootdemo.user.UserRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -13,6 +15,7 @@ import java.time.Instant
 class FriendshipService(
     private val friendshipRepository: FriendshipRepository,
     private val userRepository: UserRepository,
+    private val notificationService: NotificationService,
 ) {
 
     private fun findUser(id: Long) =
@@ -35,9 +38,16 @@ class FriendshipService(
             throw ConflictException("Ya existe una relación entre los usuarios $first y $second")
         }
 
-        return friendshipRepository.save(
+        val saved = friendshipRepository.save(
             Friendship(requester = requester, addressee = addressee),
         )
+        notificationService.create(
+            recipient = addressee,
+            actor = requester,
+            type = NotificationType.FRIEND_REQUEST,
+            referenceId = saved.id,
+        )
+        return saved
     }
 
     fun getFriendship(id: Long): Friendship =
@@ -58,7 +68,14 @@ class FriendshipService(
         }
         friendship.status = FriendshipStatus.ACCEPTED
         friendship.updatedAt = Instant.now()
-        return friendshipRepository.save(friendship)
+        val saved = friendshipRepository.save(friendship)
+        notificationService.create(
+            recipient = friendship.requester,
+            actor = friendship.addressee,
+            type = NotificationType.FRIEND_ACCEPTED,
+            referenceId = saved.id,
+        )
+        return saved
     }
 
     @Transactional

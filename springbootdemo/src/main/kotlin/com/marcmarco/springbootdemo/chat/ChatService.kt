@@ -1,10 +1,11 @@
 package com.marcmarco.springbootdemo.chat
 
 import com.marcmarco.springbootdemo.common.exception.BadRequestException
-import com.marcmarco.springbootdemo.common.exception.ConflictException
 import com.marcmarco.springbootdemo.common.exception.NotFoundException
 import com.marcmarco.springbootdemo.chat.dto.ConversationRequest
 import com.marcmarco.springbootdemo.chat.dto.MessageRequest
+import com.marcmarco.springbootdemo.notification.NotificationService
+import com.marcmarco.springbootdemo.notification.NotificationType
 import com.marcmarco.springbootdemo.user.UserRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
@@ -14,6 +15,7 @@ class ChatService(
     private val conversationRepository: ConversationRepository,
     private val messageRepository: MessageRepository,
     private val userRepository: UserRepository,
+    private val notificationService: NotificationService,
 ) {
 
     private fun findUser(id: Long) =
@@ -67,9 +69,17 @@ class ChatService(
             throw BadRequestException("El usuario ${request.senderId} no participa en esta conversación")
         }
         val sender = findUser(request.senderId)
-        return messageRepository.save(
+        val message = messageRepository.save(
             Message(conversation = conversation, sender = sender, content = request.content.trim()),
         )
+        val recipient = if (conversation.initiator.id == sender.id) conversation.participant else conversation.initiator
+        notificationService.create(
+            recipient = recipient,
+            actor = sender,
+            type = NotificationType.NEW_MESSAGE,
+            referenceId = conversationId,
+        )
+        return message
     }
 
     fun getMessages(conversationId: Long, userId: Long, limit: Int): List<Message> {
