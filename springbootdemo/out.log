@@ -1,0 +1,51 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+[32m :: Spring Boot :: [39m              [2m (v4.1.1)[0;39m
+
+[2m2026-09-14T17:08:25.762+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36mc.m.s.SpringbootdemoApplicationKt       [0;39m [2m:[0;39m Starting SpringbootdemoApplicationKt using Java 21.0.12.1 with PID 26712 (C:\Users\usuario\IdeaProjects\springbootdem\springbootdemo\build\classes\kotlin\main started by usuario in C:\Users\usuario\IdeaProjects\springbootdem\springbootdemo)
+[2m2026-09-14T17:08:25.765+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36mc.m.s.SpringbootdemoApplicationKt       [0;39m [2m:[0;39m No active profile set, falling back to 1 default profile: "default"
+[2m2026-09-14T17:08:25.810+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36m.e.DevToolsPropertyDefaultsPostProcessor[0;39m [2m:[0;39m Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+[2m2026-09-14T17:08:25.810+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36m.e.DevToolsPropertyDefaultsPostProcessor[0;39m [2m:[0;39m For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+[2m2026-09-14T17:08:26.338+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36m.s.d.r.c.RepositoryConfigurationDelegate[0;39m [2m:[0;39m Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+[2m2026-09-14T17:08:26.388+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36m.s.d.r.c.RepositoryConfigurationDelegate[0;39m [2m:[0;39m Finished Spring Data repository scanning in 36 ms. Found 0 JPA repository interfaces.
+[2m2026-09-14T17:08:26.888+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36mo.s.boot.tomcat.TomcatWebServer         [0;39m [2m:[0;39m Tomcat initialized with port 8080 (http)
+[2m2026-09-14T17:08:26.899+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36mo.apache.catalina.core.StandardService  [0;39m [2m:[0;39m Starting service [Tomcat]
+[2m2026-09-14T17:08:26.899+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36mo.apache.catalina.core.StandardEngine   [0;39m [2m:[0;39m Starting Servlet engine: [Apache Tomcat/11.0.24]
+[2m2026-09-14T17:08:26.927+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36mb.w.c.s.WebApplicationContextInitializer[0;39m [2m:[0;39m Root WebApplicationContext: initialization completed in 1116 ms
+[2m2026-09-14T17:08:27.076+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36morg.hibernate.orm.jpa                   [0;39m [2m:[0;39m HHH008540: Processing PersistenceUnitInfo [name: default]
+[2m2026-09-14T17:08:27.115+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36morg.hibernate.orm.core                  [0;39m [2m:[0;39m HHH000001: Hibernate ORM core version 7.4.5.Final
+[2m2026-09-14T17:08:27.402+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36mo.s.o.j.p.SpringPersistenceUnitInfo     [0;39m [2m:[0;39m No LoadTimeWeaver setup: ignoring JPA class transformer
+[2m2026-09-14T17:08:27.425+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36mcom.zaxxer.hikari.HikariDataSource      [0;39m [2m:[0;39m HikariPool-1 - Starting...
+[2m2026-09-14T17:08:28.019+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36mcom.zaxxer.hikari.pool.HikariPool       [0;39m [2m:[0;39m HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@b155a83
+[2m2026-09-14T17:08:28.020+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36mcom.zaxxer.hikari.HikariDataSource      [0;39m [2m:[0;39m HikariPool-1 - Start completed.
+[2m2026-09-14T17:08:28.243+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36morg.hibernate.orm.connections.pooling   [0;39m [2m:[0;39m HHH10001005: Database info:
+	Database JDBC URL [jdbc:postgresql://aws-0-eu-central-1.pooler.supabase.com:5432/postgres]
+	Database driver: PostgreSQL JDBC Driver
+	Database dialect: PostgreSQLDialect
+	Database version: 17.6
+	Default catalog/schema: postgres/public
+	Autocommit mode: undefined/unknown
+	Isolation level: READ_COMMITTED [default READ_COMMITTED]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+[2m2026-09-14T17:08:28.552+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36morg.hibernate.orm.core                  [0;39m [2m:[0;39m HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+[2m2026-09-14T17:08:28.756+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36mj.LocalContainerEntityManagerFactoryBean[0;39m [2m:[0;39m Initialized JPA EntityManagerFactory for persistence unit 'default'
+[2m2026-09-14T17:08:29.021+02:00[0;39m [33m WARN[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36mJpaBaseConfiguration$JpaWebConfiguration[0;39m [2m:[0;39m spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+[2m2026-09-14T17:08:29.302+02:00[0;39m [33m WARN[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36m.s.a.UserDetailsServiceAutoConfiguration[0;39m [2m:[0;39m 
+
+Using generated security password: 3732a2bc-5058-46a6-81ad-ea625980bb37
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+[2m2026-09-14T17:08:29.322+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36mr$InitializeUserDetailsManagerConfigurer[0;39m [2m:[0;39m Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
+[2m2026-09-14T17:08:29.472+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36mo.s.b.a.e.web.EndpointLinksResolver     [0;39m [2m:[0;39m Exposing 1 endpoint beneath base path '/actuator'
+[2m2026-09-14T17:08:29.652+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36mo.s.boot.tomcat.TomcatWebServer         [0;39m [2m:[0;39m Tomcat started on port 8080 (http) with context path '/'
+[2m2026-09-14T17:08:29.662+02:00[0;39m [32m INFO[0;39m [35m26712[0;39m [2m--- [springbootdemo] [  restartedMain] [0;39m[36mc.m.s.SpringbootdemoApplicationKt       [0;39m [2m:[0;39m Started SpringbootdemoApplicationKt in 4.179 seconds (process running for 6.824)
