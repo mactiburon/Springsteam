@@ -51,7 +51,7 @@ Cada módulo sigue el patrón **Entity → Repository → Service → Controller
 | ⚙️ Config | ✅ Hecho | Beans (BCrypt), Security temporal, `.env` |
 | 👤 Usuarios | ✅ Hecho | Registro, login, perfil, búsqueda |
 | 🎮 Juegos | ✅ Hecho | Catálogo y filtros |
-| 📚 Biblioteca | ⏳ Pendiente | Juegos del usuario, favoritos, horas |
+| 📚 Biblioteca | ✅ Hecho | Juegos del usuario, favoritos, horas |
 | 👥 Amigos | ⏳ Pendiente | Solicitudes, bloqueos |
 | 🏷️ Motes | ⏳ Pendiente | Apodos privados entre amigos |
 | 💬 Chat | ⏳ Pendiente | Conversaciones + WebSocket |
@@ -70,12 +70,12 @@ springbootdemo/
 │   ├── user/              # Módulo de usuarios (Fase 1)
 │   │   └── dto/           # Request/Response (nunca exponen password)
 │   ├── game/              # Módulo de juegos (Fase 2)
-│   ├── library/           # (próximo)
+│   ├── library/           # Módulo de biblioteca (Fase 3)
 │   ├── friendship/        # (próximo)
 │   ├── nickname/          # (próximo)
 │   ├── chat/              # (próximo)
 │   └── notification/      # (próximo)
-└── src/test/kotlin/.../user/   # Tests de integración (MockMvc)
+└── src/test/kotlin/.../   # Tests de integración (MockMvc)
 ```
 
 ## 🚀 Puesta en marcha
@@ -150,12 +150,30 @@ Respuestas de error con formato uniforme:
 La búsqueda es *case-insensitive* y parcial (contiene el texto), con una sola
 consulta JPQL parametrizada que ignora los filtros vacíos (`IS NULL OR LIKE`).
 
+## 🔌 API — Fase 3 (Biblioteca)
+
+| Método | Ruta | Descripción | Códigos |
+|--------|------|-------------|---------|
+| POST | `/api/library` | Añadir juego a biblioteca | 201 · 400 · 404 · 409 |
+| GET | `/api/library` | Listar juegos de un usuario | 200 · 404 |
+| GET | `/api/library/{gameId}` | Detalle de una entrada | 200 · 404 |
+| PUT | `/api/library/{gameId}` | Actualizar favorito / horas | 200 · 404 |
+| DELETE | `/api/library/{gameId}` | Quitar de biblioteca | 204 · 404 |
+
+Todos los endpoints llevan `?userId=` como parámetro requerido (hasta la Fase 9 con JWT).
+
+**Filtros de lista** (combinables):
+`?name=` (nombre del juego) · `?favorites=true` (solo marcados como favorito)
+
+La respuesta incluye el objeto `game` anidado con los datos del juego. Las horas son
+un `Double` (soporta decimales para sesiones parciales).
+
 ## 📜 Roadmap
 
 - [x] **Fase 0** — Configuración base (`.env`, estructura de paquetes)
 - [x] **Fase 1** — 👤 Usuarios (+ tests de integración)
 - [x] **Fase 2** — 🎮 Juegos (+ tests de integración)
-- [ ] **Fase 3** — 📚 Biblioteca
+- [x] **Fase 3** — 📚 Biblioteca (+ tests de integración)
 - [ ] **Fase 4** — 👥 Amigos
 - [ ] **Fase 5** — 🏷️ Motes
 - [ ] **Fase 6** — 🔎 Búsqueda
