@@ -55,7 +55,7 @@ Cada módulo sigue el patrón **Entity → Repository → Service → Controller
 | 👥 Amigos | ✅ Hecho | Solicitudes, aceptar, bloquear |
 | 🏷️ Motes | ✅ Hecho | Apodos privados entre amigos |
 | 🔎 Búsqueda | ✅ Hecho | Búsqueda global + autocompletado |
-| 💬 Chat | ⏳ Pendiente | Conversaciones + WebSocket |
+| 💬 Chat | ✅ Hecho | Conversaciones + mensajería WebSocket |
 | 🔔 Notificaciones | ⏳ Pendiente | Avisos al usuario |
 | 🔐 Seguridad | ⏳ Pendiente | JWT (protocolo de la Fase 9) |
 | ⚙️ Configuración | ⏳ Pendiente | Ajustes de cuenta |
@@ -75,7 +75,8 @@ springbootdemo/
 │   ├── friendship/        # Módulo de amigos (Fase 4)
 │   ├── nickname/          # Módulo de motes (Fase 5)
 │   ├── search/            # Módulo de búsqueda global (Fase 6)
-│   ├── chat/              # (próximo)
+│   ├── chat/              # Conversaciones + WebSocket (Fase 7)
+│   │   └── dto/           # Request/Response del chat
 │   └── notification/      # (próximo)
 └── src/test/kotlin/.../   # Tests de integración (MockMvc)
 ```
@@ -219,6 +220,31 @@ y usernames (machados únicos).
 La búsqueda es *case-insensitive* y cubre juegos por **nombre, género, desarrollador y
 publisher**, y usuarios por **username y displayName**. Query vacía → listas vacías.
 
+## 🔌 API — Fase 7 (Chat)
+
+### REST
+
+| Método | Ruta | Descripción | Códigos |
+|--------|------|-------------|---------|
+| POST | `/api/conversations` | Crear conversación (o devolver la existente) | 201 · 200 · 400 · 404 |
+| GET | `/api/conversations?userId=` | Conversaciones de un usuario (con último mensaje) | 200 |
+| GET | `/api/conversations/between?userId=&otherUserId=` | Conversación directa o 404 si no existe | 200 · 404 |
+| GET | `/api/conversations/{id}/messages?userId=&limit=` | Historial de mensajes (default `limit=100`) | 200 · 400 · 404 |
+| POST | `/api/conversations/{id}/messages` | Enviar mensaje y **broadcast STOMP** (`senderId`, `content`) | 201 · 400 · 404 |
+
+`POST /api/conversations` es **idempotente**: si ya existe una conversación entre los dos
+usuarios devuelve `200` con la existente; si no, la crea con `201`.
+
+### WebSocket (STOMP)
+
+- Endpoint de *handshake*: `ws://localhost:8080/ws`
+- Suscribirse al historial: `/topic/conversations/{id}`
+- Enviar un mensaje: tema `/app/chat/{id}` con body `{ "senderId": ..., "content": "..." }`
+
+Cada mensaje se **persiste antes** de notificar, así que quien se conecte después puede
+recuperar el historial por REST. El broadcast llega a todos los suscritos al topic de la
+conversación.
+
 ## 📜 Roadmap
 
 - [x] **Fase 0** — Configuración base (`.env`, estructura de paquetes)
@@ -228,7 +254,7 @@ publisher**, y usuarios por **username y displayName**. Query vacía → listas 
 - [x] **Fase 4** — 👥 Amigos (+ tests de integración)
 - [x] **Fase 5** — 🏷️ Motes (+ tests de integración)
 - [x] **Fase 6** — 🔎 Búsqueda (+ tests de integración)
-- [ ] **Fase 7** — 💬 Chat (WebSocket)
+- [x] **Fase 7** — 💬 Chat (WebSocket) (+ tests de integración)
 - [ ] **Fase 8** — 🔔 Notificaciones
 - [ ] **Fase 9** — 🔐 Seguridad (JWT)
 - [ ] **Fase 10** — ⚙️ Configuración de cuenta
