@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 fun HomeScreen(
     session: Session,
     onOpenUsers: () -> Unit,
+    onOpenGames: () -> Unit,
     onOpenProfile: () -> Unit,
     onLogout: () -> Unit,
 ) {
@@ -56,6 +57,10 @@ fun HomeScreen(
             Spacer(Modifier.weight(1f))
             Button(onClick = onOpenUsers, modifier = Modifier.fillMaxWidth()) {
                 Text("Ver usuarios")
+            }
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = onOpenGames, modifier = Modifier.fillMaxWidth()) {
+                Text("Ver juegos")
             }
             Spacer(Modifier.height(8.dp))
             Button(onClick = onOpenProfile, modifier = Modifier.fillMaxWidth()) {

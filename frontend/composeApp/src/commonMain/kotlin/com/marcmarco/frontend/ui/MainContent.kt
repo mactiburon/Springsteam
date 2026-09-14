@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.marcmarco.frontend.api.GameApi
 import com.marcmarco.frontend.api.UserApi
 import com.marcmarco.frontend.api.dto.UserResponse
 
@@ -29,6 +30,7 @@ fun MainContent(
     onLogout: () -> Unit,
 ) {
     val userApi = remember { UserApi() }
+    val gameApi = remember { GameApi() }
     var section by remember { mutableStateOf<MainSection>(MainSection.Home) }
 
     Scaffold(
@@ -42,6 +44,7 @@ fun MainContent(
                 ) {
                     BottomNavItem("Inicio", section == MainSection.Home) { section = MainSection.Home }
                     BottomNavItem("Usuarios", section == MainSection.Users) { section = MainSection.Users }
+                    BottomNavItem("Juegos", section == MainSection.Games) { section = MainSection.Games }
                     BottomNavItem("Perfil", section == MainSection.Profile) { section = MainSection.Profile }
                 }
             }
@@ -52,6 +55,7 @@ fun MainContent(
                 MainSection.Home -> HomeScreen(
                     session = session,
                     onOpenUsers = { section = MainSection.Users },
+                    onOpenGames = { section = MainSection.Games },
                     onOpenProfile = { section = MainSection.Profile },
                     onLogout = onLogout,
                 )
@@ -60,6 +64,12 @@ fun MainContent(
                     userApi = userApi,
                     token = session.token,
                     onOpenUser = { section = MainSection.UserDetail(it) },
+                )
+
+                MainSection.Games -> GamesScreen(
+                    gameApi = gameApi,
+                    token = session.token,
+                    onOpenGame = { section = MainSection.GameDetail(it) },
                 )
 
                 MainSection.Profile -> ProfileScreen(
@@ -76,6 +86,13 @@ fun MainContent(
                     userId = current.userId,
                     onProfileUpdated = onProfileUpdated,
                     onBack = { section = MainSection.Users },
+                )
+
+                is MainSection.GameDetail -> GameDetailScreen(
+                    gameApi = gameApi,
+                    token = session.token,
+                    gameId = current.gameId,
+                    onBack = { section = MainSection.Games },
                 )
             }
         }
