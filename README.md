@@ -54,6 +54,7 @@ Cada módulo sigue el patrón **Entity → Repository → Service → Controller
 | 📚 Biblioteca | ✅ Hecho | Juegos del usuario, favoritos, horas |
 | 👥 Amigos | ✅ Hecho | Solicitudes, aceptar, bloquear |
 | 🏷️ Motes | ✅ Hecho | Apodos privados entre amigos |
+| 🔎 Búsqueda | ✅ Hecho | Búsqueda global + autocompletado |
 | 💬 Chat | ⏳ Pendiente | Conversaciones + WebSocket |
 | 🔔 Notificaciones | ⏳ Pendiente | Avisos al usuario |
 | 🔐 Seguridad | ⏳ Pendiente | JWT (protocolo de la Fase 9) |
@@ -73,6 +74,7 @@ springbootdemo/
 │   ├── library/           # Módulo de biblioteca (Fase 3)
 │   ├── friendship/        # Módulo de amigos (Fase 4)
 │   ├── nickname/          # Módulo de motes (Fase 5)
+│   ├── search/            # Módulo de búsqueda global (Fase 6)
 │   ├── chat/              # (próximo)
 │   └── notification/      # (próximo)
 └── src/test/kotlin/.../   # Tests de integración (MockMvc)
@@ -200,6 +202,23 @@ pueden convivir un mote de A hacia B y otro de B hacia A sin colisión.
 **Regla de negocio**: solo se puede poner un mote a un usuario con el que exista una
 relación `ACCEPTED` (en cualquiera de las dos direcciones).
 
+## 🔌 API — Fase 6 (Búsqueda)
+
+| Método | Ruta | Descripción | Códigos |
+|--------|------|-------------|---------|
+| GET | `/api/search` | Búsqueda global (juegos + usuarios) | 200 |
+| GET | `/api/search/suggestions` | Autocompletado de juegos y usuarios | 200 |
+
+`GET /api/search?q=texto` devuelve:
+```json
+{ "games": [ /* GameResponse */ ], "users": [ /* UserResponse */ ] }
+```
+`GET /api/search/suggestions?q=texto&limit=5` devuelve una lista de nombres de juegos
+y usernames (machados únicos).
+
+La búsqueda es *case-insensitive* y cubre juegos por **nombre, género, desarrollador y
+publisher**, y usuarios por **username y displayName**. Query vacía → listas vacías.
+
 ## 📜 Roadmap
 
 - [x] **Fase 0** — Configuración base (`.env`, estructura de paquetes)
@@ -208,7 +227,7 @@ relación `ACCEPTED` (en cualquiera de las dos direcciones).
 - [x] **Fase 3** — 📚 Biblioteca (+ tests de integración)
 - [x] **Fase 4** — 👥 Amigos (+ tests de integración)
 - [x] **Fase 5** — 🏷️ Motes (+ tests de integración)
-- [ ] **Fase 6** — 🔎 Búsqueda
+- [x] **Fase 6** — 🔎 Búsqueda (+ tests de integración)
 - [ ] **Fase 7** — 💬 Chat (WebSocket)
 - [ ] **Fase 8** — 🔔 Notificaciones
 - [ ] **Fase 9** — 🔐 Seguridad (JWT)

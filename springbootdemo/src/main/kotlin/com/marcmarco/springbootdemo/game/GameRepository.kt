@@ -28,4 +28,16 @@ interface GameRepository : JpaRepository<Game, Long> {
         @Param("releaseDateFrom") releaseDateFrom: LocalDate?,
         @Param("releaseDateTo") releaseDateTo: LocalDate?,
     ): List<Game>
+
+    @Query(
+        """
+        SELECT g FROM Game g
+        WHERE LOWER(g.name) LIKE LOWER(CONCAT('%', :q, '%'))
+           OR LOWER(g.genre) LIKE LOWER(CONCAT('%', :q, '%'))
+           OR LOWER(g.developer) LIKE LOWER(CONCAT('%', :q, '%'))
+           OR LOWER(g.publisher) LIKE LOWER(CONCAT('%', :q, '%'))
+        ORDER BY g.name
+        """
+    )
+    fun searchGlobal(@Param("q") q: String): List<Game>
 }
