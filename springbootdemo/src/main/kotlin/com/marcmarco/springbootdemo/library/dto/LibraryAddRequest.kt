@@ -5,10 +5,6 @@ import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Positive
 
 data class LibraryAddRequest(
-    @field:NotNull(message = "El userId es obligatorio")
-    @field:Positive(message = "El userId debe ser un número positivo")
-    val userId: Long,
-
     @field:NotNull(message = "El gameId es obligatorio")
     @field:Positive(message = "El gameId debe ser un número positivo")
     val gameId: Long,

@@ -15,14 +15,14 @@ class LibraryService(
     private val gameRepository: GameRepository,
 ) {
 
-    fun add(request: LibraryAddRequest): LibraryEntry {
-        val user = userRepository.findById(request.userId)
-            .orElseThrow { NotFoundException("Usuario con id ${request.userId} no encontrado") }
+    fun add(userId: Long, request: LibraryAddRequest): LibraryEntry {
+        val user = userRepository.findById(userId)
+            .orElseThrow { NotFoundException("Usuario con id $userId no encontrado") }
         val game = gameRepository.findById(request.gameId)
             .orElseThrow { NotFoundException("Juego con id ${request.gameId} no encontrado") }
 
-        if (libraryRepository.existsByUserIdAndGameId(request.userId, request.gameId)) {
-            throw ConflictException("El juego '${game.name}' ya está en la biblioteca del usuario ${request.userId}")
+        if (libraryRepository.existsByUserIdAndGameId(userId, request.gameId)) {
+            throw ConflictException("El juego '${game.name}' ya está en la biblioteca del usuario $userId")
         }
 
         val entry = LibraryEntry(

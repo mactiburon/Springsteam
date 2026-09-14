@@ -6,6 +6,7 @@ import org.springframework.messaging.handler.annotation.DestinationVariable
 import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.messaging.simp.SimpMessagingTemplate
 import org.springframework.stereotype.Controller
+import java.security.Principal
 
 @Controller
 class ChatWebSocketController(
@@ -16,9 +17,11 @@ class ChatWebSocketController(
     @MessageMapping("/chat/{conversationId}")
     fun sendMessage(
         @DestinationVariable conversationId: Long,
+        principal: Principal,
         message: MessageRequest,
     ) {
-        val saved = chatService.saveMessage(conversationId, message)
+        val senderId = requireNotNull(principal.name).toLong()
+        val saved = chatService.saveMessage(conversationId, senderId, message.content)
         messagingTemplate.convertAndSend("/topic/conversations/$conversationId", MessageResponse.from(saved))
     }
 }

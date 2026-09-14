@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.web.servlet.MockMvc
@@ -36,26 +37,34 @@ class FriendshipControllerIntegrationTest {
     private fun jsonBody(pairs: Map<String, Any?>): String =
         objectMapper.writeValueAsString(pairs.filterValues { it != null })
 
-    private fun registerUser(prefix: String): Long {
-        val body = jsonBody(
-            mapOf(
-                "username" to "${prefix}_$suffix",
-                "email" to "${prefix}_$suffix@test.com",
-                "password" to "secreto123",
-            ),
-        )
-        val response = mockMvc.perform(
-            post("/api/users").contentType(MediaType.APPLICATION_JSON).content(body),
+    private data class Session(val userId: Long, val token: String)
+
+    private fun registerLogin(prefix: String): Session {
+        val username = "${prefix}_$suffix"
+        mockMvc.perform(
+            post("/api/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonBody(mapOf("username" to username, "email" to "${prefix}_$suffix@test.com", "password" to "secreto123"))),
         )
             .andExpect(status().isCreated)
+        val response = mockMvc.perform(
+            post("/api/users/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonBody(mapOf("identifier" to username, "password" to "secreto123"))),
+        )
+            .andExpect(status().isOk)
             .andReturn().response
-        return objectMapper.readTree(response.contentAsString).path("id").asLong()
+        val tree = objectMapper.readTree(response.contentAsString)
+        return Session(userId = tree.path("user").path("id").asLong(), token = tree.path("token").asText())
     }
 
-    private fun sendRequest(requesterId: Long, addresseeId: Long): Long {
-        val body = jsonBody(mapOf("requesterId" to requesterId, "addresseeId" to addresseeId))
+    private fun sendRequest(requesterToken: String, addresseeId: Long): Long {
+        val body = jsonBody(mapOf("addresseeId" to addresseeId))
         val response = mockMvc.perform(
-            post("/api/friendships").contentType(MediaType.APPLICATION_JSON).content(body),
+            post("/api/friendships")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $requesterToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body),
         )
             .andExpect(status().isCreated)
             .andReturn().response
@@ -66,12 +75,13 @@ class FriendshipControllerIntegrationTest {
 
     @Test
     fun `enviar solicitud devuelve 201 con estado PENDING`() {
-        val alice = registerUser("alice")
-        val bob = registerUser("bob")
+        val alice = registerLogin("alice")
+        val bob = registerLogin("bob")
         mockMvc.perform(
             post("/api/friendships")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(jsonBody(mapOf("requesterId" to alice, "addresseeId" to bob))),
+                .content(jsonBody(mapOf("addresseeId" to bob.userId))),
         )
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.status").value("PENDING"))
@@ -81,11 +91,12 @@ class FriendshipControllerIntegrationTest {
 
     @Test
     fun `no puedes enviarte solicitud a ti mismo devuelve 400`() {
-        val alice = registerUser("solo")
+        val alice = registerLogin("solo")
         mockMvc.perform(
             post("/api/friendships")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(jsonBody(mapOf("requesterId" to alice, "addresseeId" to alice))),
+                .content(jsonBody(mapOf("addresseeId" to alice.userId))),
         )
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.message").value("No puedes enviarte una solicitud de amistad a ti mismo"))
@@ -93,38 +104,41 @@ class FriendshipControllerIntegrationTest {
 
     @Test
     fun `doble solicitud misma direccion devuelve 409`() {
-        val alice = registerUser("dupA")
-        val bob = registerUser("dupB")
-        sendRequest(alice, bob)
+        val alice = registerLogin("dupA")
+        val bob = registerLogin("dupB")
+        sendRequest(alice.token, bob.userId)
         mockMvc.perform(
             post("/api/friendships")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(jsonBody(mapOf("requesterId" to alice, "addresseeId" to bob))),
+                .content(jsonBody(mapOf("addresseeId" to bob.userId))),
         )
             .andExpect(status().isConflict)
     }
 
     @Test
     fun `solicitud inversa ya existente devuelve 409`() {
-        val alice = registerUser("invA")
-        val bob = registerUser("invB")
-        sendRequest(alice, bob)
+        val alice = registerLogin("invA")
+        val bob = registerLogin("invB")
+        sendRequest(alice.token, bob.userId)
         mockMvc.perform(
             post("/api/friendships")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${bob.token}")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(jsonBody(mapOf("requesterId" to bob, "addresseeId" to alice))),
+                .content(jsonBody(mapOf("addresseeId" to alice.userId))),
         )
             .andExpect(status().isConflict)
-            .andExpect(jsonPath("$.message").value("Ya existe una relación entre los usuarios $alice y $bob"))
+            .andExpect(jsonPath("$.message").value("Ya existe una relación entre los usuarios ${alice.userId} y ${bob.userId}"))
     }
 
     @Test
     fun `solicitud con usuario inexistente devuelve 404`() {
-        val alice = registerUser("fantA")
+        val alice = registerLogin("fantA")
         mockMvc.perform(
             post("/api/friendships")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(jsonBody(mapOf("requesterId" to alice, "addresseeId" to 999999999))),
+                .content(jsonBody(mapOf("addresseeId" to 999999999))),
         )
             .andExpect(status().isNotFound)
     }
@@ -133,31 +147,31 @@ class FriendshipControllerIntegrationTest {
 
     @Test
     fun `aceptar solicitud devuelve 200 y cambia a ACCEPTED`() {
-        val alice = registerUser("acepA")
-        val bob = registerUser("acepB")
-        val id = sendRequest(alice, bob)
-        mockMvc.perform(put("/api/friendships/$id/accept").param("userId", bob.toString()))
+        val alice = registerLogin("acepA")
+        val bob = registerLogin("acepB")
+        val id = sendRequest(alice.token, bob.userId)
+        mockMvc.perform(put("/api/friendships/$id/accept").header(HttpHeaders.AUTHORIZATION, "Bearer ${bob.token}"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value("ACCEPTED"))
     }
 
     @Test
     fun `solo el destinatario puede aceptar devuelve 400`() {
-        val alice = registerUser("destA")
-        val bob = registerUser("destB")
-        val id = sendRequest(alice, bob)
-        mockMvc.perform(put("/api/friendships/$id/accept").param("userId", alice.toString()))
+        val alice = registerLogin("destA")
+        val bob = registerLogin("destB")
+        val id = sendRequest(alice.token, bob.userId)
+        mockMvc.perform(put("/api/friendships/$id/accept").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}"))
             .andExpect(status().isBadRequest)
     }
 
     @Test
     fun `aceptar solicitud no pendiente devuelve 409`() {
-        val alice = registerUser("nopenA")
-        val bob = registerUser("nopenB")
-        val id = sendRequest(alice, bob)
-        mockMvc.perform(put("/api/friendships/$id/accept").param("userId", bob.toString()))
+        val alice = registerLogin("nopenA")
+        val bob = registerLogin("nopenB")
+        val id = sendRequest(alice.token, bob.userId)
+        mockMvc.perform(put("/api/friendships/$id/accept").header(HttpHeaders.AUTHORIZATION, "Bearer ${bob.token}"))
             .andExpect(status().isOk)
-        mockMvc.perform(put("/api/friendships/$id/accept").param("userId", bob.toString()))
+        mockMvc.perform(put("/api/friendships/$id/accept").header(HttpHeaders.AUTHORIZATION, "Bearer ${bob.token}"))
             .andExpect(status().isConflict)
     }
 
@@ -165,21 +179,21 @@ class FriendshipControllerIntegrationTest {
 
     @Test
     fun `bloquear devuelve 200 y cambia a BLOCKED`() {
-        val alice = registerUser("bloqA")
-        val bob = registerUser("bloqB")
-        val id = sendRequest(alice, bob)
-        mockMvc.perform(put("/api/friendships/$id/block").param("userId", bob.toString()))
+        val alice = registerLogin("bloqA")
+        val bob = registerLogin("bloqB")
+        val id = sendRequest(alice.token, bob.userId)
+        mockMvc.perform(put("/api/friendships/$id/block").header(HttpHeaders.AUTHORIZATION, "Bearer ${bob.token}"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value("BLOCKED"))
     }
 
     @Test
     fun `un tercero no puede bloquear devuelve 400`() {
-        val alice = registerUser("terA")
-        val bob = registerUser("terB")
-        val carol = registerUser("terC")
-        val id = sendRequest(alice, bob)
-        mockMvc.perform(put("/api/friendships/$id/block").param("userId", carol.toString()))
+        val alice = registerLogin("terA")
+        val bob = registerLogin("terB")
+        val carol = registerLogin("terC")
+        val id = sendRequest(alice.token, bob.userId)
+        mockMvc.perform(put("/api/friendships/$id/block").header(HttpHeaders.AUTHORIZATION, "Bearer ${carol.token}"))
             .andExpect(status().isBadRequest)
     }
 
@@ -187,24 +201,24 @@ class FriendshipControllerIntegrationTest {
 
     @Test
     fun `listar relaciones de un usuario devuelve todas`() {
-        val alice = registerUser("listA")
-        val bob = registerUser("listB")
-        sendRequest(alice, bob)
-        mockMvc.perform(get("/api/friendships").param("userId", alice.toString()))
+        val alice = registerLogin("listA")
+        val bob = registerLogin("listB")
+        sendRequest(alice.token, bob.userId)
+        mockMvc.perform(get("/api/friendships").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$[*].status", hasItem("PENDING")))
     }
 
     @Test
     fun `filtrar por estado devuelve solo las que coinciden`() {
-        val alice = registerUser("filtA")
-        val bob = registerUser("filtB")
-        val carol = registerUser("filtC")
-        val id = sendRequest(alice, bob)
-        sendRequest(alice, carol)
-        mockMvc.perform(put("/api/friendships/$id/accept").param("userId", bob.toString()))
+        val alice = registerLogin("filtA")
+        val bob = registerLogin("filtB")
+        val carol = registerLogin("filtC")
+        val id = sendRequest(alice.token, bob.userId)
+        sendRequest(alice.token, carol.userId)
+        mockMvc.perform(put("/api/friendships/$id/accept").header(HttpHeaders.AUTHORIZATION, "Bearer ${bob.token}"))
             .andExpect(status().isOk)
-        mockMvc.perform(get("/api/friendships").param("userId", alice.toString()).param("status", "ACCEPTED"))
+        mockMvc.perform(get("/api/friendships").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}").param("status", "ACCEPTED"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$[*].status", hasItem("ACCEPTED")))
             .andExpect(jsonPath("$[*].status", not(hasItem("PENDING"))))
@@ -212,10 +226,10 @@ class FriendshipControllerIntegrationTest {
 
     @Test
     fun `listar relaciones de un lado como addressee las incluye`() {
-        val alice = registerUser("ladoA")
-        val bob = registerUser("ladoB")
-        sendRequest(alice, bob)
-        mockMvc.perform(get("/api/friendships").param("userId", bob.toString()))
+        val alice = registerLogin("ladoA")
+        val bob = registerLogin("ladoB")
+        sendRequest(alice.token, bob.userId)
+        mockMvc.perform(get("/api/friendships").header(HttpHeaders.AUTHORIZATION, "Bearer ${bob.token}"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$[0].requester.username").value("ladoA_$suffix"))
     }
@@ -224,28 +238,29 @@ class FriendshipControllerIntegrationTest {
 
     @Test
     fun `borrar relacion devuelve 204 y desaparece`() {
-        val alice = registerUser("borrA")
-        val bob = registerUser("borrB")
-        val id = sendRequest(alice, bob)
-        mockMvc.perform(delete("/api/friendships/$id").param("userId", alice.toString()))
+        val alice = registerLogin("borrA")
+        val bob = registerLogin("borrB")
+        val id = sendRequest(alice.token, bob.userId)
+        mockMvc.perform(delete("/api/friendships/$id").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}"))
             .andExpect(status().isNoContent)
-        mockMvc.perform(get("/api/friendships/$id"))
+        mockMvc.perform(get("/api/friendships/$id").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}"))
             .andExpect(status().isNotFound)
     }
 
     @Test
     fun `un tercero no puede borrar devuelve 400`() {
-        val alice = registerUser("tborrA")
-        val bob = registerUser("tborrB")
-        val carol = registerUser("tborrC")
-        val id = sendRequest(alice, bob)
-        mockMvc.perform(delete("/api/friendships/$id").param("userId", carol.toString()))
+        val alice = registerLogin("tborrA")
+        val bob = registerLogin("tborrB")
+        val carol = registerLogin("tborrC")
+        val id = sendRequest(alice.token, bob.userId)
+        mockMvc.perform(delete("/api/friendships/$id").header(HttpHeaders.AUTHORIZATION, "Bearer ${carol.token}"))
             .andExpect(status().isBadRequest)
     }
 
     @Test
     fun `relacion inexistente devuelve 404`() {
-        mockMvc.perform(get("/api/friendships/999999999"))
+        val alice = registerLogin("noex")
+        mockMvc.perform(get("/api/friendships/999999999").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}"))
             .andExpect(status().isNotFound)
     }
 }

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.web.servlet.MockMvc
@@ -56,6 +57,14 @@ class UserControllerIntegrationTest {
             .andExpect(status().isCreated)
             .andReturn().response
         return objectMapper.readTree(response.contentAsString).path("id").asLong()
+    }
+
+    private fun loginToken(username: String, password: String = "secreto123"): String {
+        val body = jsonBody(mapOf("identifier" to username, "password" to password))
+        val response = mockMvc.perform(post("/api/users/login").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isOk)
+            .andReturn().response
+        return objectMapper.readTree(response.contentAsString).path("token").asText()
     }
 
     // ===== Registro =====
@@ -135,13 +144,16 @@ class UserControllerIntegrationTest {
     // ===== Login =====
 
     @Test
-    fun `login con username correcto devuelve 200`() {
+    fun `login con username correcto devuelve 200 con token JWT`() {
         val username = uniqueUser()
         register(username, uniqueEmail(), "secreto123")
         val body = jsonBody(mapOf("identifier" to username, "password" to "secreto123"))
         mockMvc.perform(post("/api/users/login").contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.username").value(username))
+            .andExpect(jsonPath("$.token").isNotEmpty)
+            .andExpect(jsonPath("$.tokenType").value("Bearer"))
+            .andExpect(jsonPath("$.expiresIn").isNumber)
+            .andExpect(jsonPath("$.user.username").value(username))
     }
 
     @Test
@@ -151,7 +163,8 @@ class UserControllerIntegrationTest {
         val body = jsonBody(mapOf("identifier" to email, "password" to "secreto123"))
         mockMvc.perform(post("/api/users/login").contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.email").value(email))
+            .andExpect(jsonPath("$.token").isNotEmpty)
+            .andExpect(jsonPath("$.user.email").value(email))
     }
 
     @Test
@@ -195,9 +208,15 @@ class UserControllerIntegrationTest {
     @Test
     fun `editar perfil solo modifica los campos enviados`() {
         val username = uniqueUser()
-        val id = register(username, uniqueEmail())
+        register(username, uniqueEmail())
+        val token = loginToken(username)
         val body = jsonBody(mapOf("bio" to "Jugador desde siempre", "avatar" to "https://miweb.com/avatar.png"))
-        mockMvc.perform(put("/api/users/$id").contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(
+            put("/api/users/me")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body),
+        )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.displayName").value(username))
             .andExpect(jsonPath("$.bio").value("Jugador desde siempre"))
@@ -205,10 +224,10 @@ class UserControllerIntegrationTest {
     }
 
     @Test
-    fun `editar perfil de usuario inexistente devuelve 404`() {
+    fun `editar perfil sin token devuelve 401`() {
         val body = jsonBody(mapOf("bio" to "hola"))
-        mockMvc.perform(put("/api/users/999999999").contentType(MediaType.APPLICATION_JSON).content(body))
-            .andExpect(status().isNotFound)
+        mockMvc.perform(put("/api/users/me").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isUnauthorized)
     }
 
     // ===== Listar y buscar =====

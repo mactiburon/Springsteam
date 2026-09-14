@@ -1,10 +1,8 @@
 package com.marcmarco.springbootdemo.user
 
 import com.marcmarco.springbootdemo.common.exception.ConflictException
-import com.marcmarco.springbootdemo.common.exception.InvalidCredentialsException
 import com.marcmarco.springbootdemo.common.exception.NotFoundException
 import com.marcmarco.springbootdemo.user.dto.RegisterRequest
-import com.marcmarco.springbootdemo.user.dto.LoginRequest
 import com.marcmarco.springbootdemo.user.dto.UpdateProfileRequest
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -30,17 +28,6 @@ class UserService(
             displayName = request.displayName ?: request.username,
         )
         return userRepository.save(user)
-    }
-
-    fun login(request: LoginRequest): User {
-        val user = userRepository.findByUsername(request.identifier)
-            ?: userRepository.findByEmail(request.identifier)
-            ?: throw InvalidCredentialsException("Credenciales incorrectas")
-
-        if (!passwordEncoder.matches(request.password, user.password)) {
-            throw InvalidCredentialsException("Credenciales incorrectas")
-        }
-        return user
     }
 
     fun getUser(id: Long): User =

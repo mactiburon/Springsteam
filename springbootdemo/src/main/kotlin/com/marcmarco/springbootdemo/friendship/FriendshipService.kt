@@ -21,20 +21,20 @@ class FriendshipService(
     private fun findUser(id: Long) =
         userRepository.findById(id).orElseThrow { NotFoundException("Usuario con id $id no encontrado") }
 
-    fun sendRequest(request: FriendshipRequest): Friendship {
-        if (request.requesterId == request.addresseeId) {
+    fun sendRequest(userId: Long, request: FriendshipRequest): Friendship {
+        if (userId == request.addresseeId) {
             throw BadRequestException("No puedes enviarte una solicitud de amistad a ti mismo")
         }
-        val requester = findUser(request.requesterId)
+        val requester = findUser(userId)
         val addressee = findUser(request.addresseeId)
 
         val exists = friendshipRepository.existsByRequesterIdAndAddresseeId(
-            request.requesterId, request.addresseeId,
+            userId, request.addresseeId,
         ) || friendshipRepository.existsByRequesterIdAndAddresseeId(
-            request.addresseeId, request.requesterId,
+            request.addresseeId, userId,
         )
         if (exists) {
-            val (first, second) = listOf(request.requesterId, request.addresseeId).sorted()
+            val (first, second) = listOf(userId, request.addresseeId).sorted()
             throw ConflictException("Ya existe una relación entre los usuarios $first y $second")
         }
 

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.web.servlet.MockMvc
@@ -36,6 +37,27 @@ class GameControllerIntegrationTest {
     private fun jsonBody(pairs: Map<String, Any?>): String =
         objectMapper.writeValueAsString(pairs.filterValues { it != null })
 
+    private var authToken: String? = null
+
+    private fun token(): String {
+        authToken?.let { return it }
+        val user = "gam_$suffix"
+        mockMvc.perform(
+            post("/api/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonBody(mapOf("username" to user, "email" to "gam_$suffix@test.com", "password" to "secreto123"))),
+        )
+            .andExpect(status().isCreated)
+        val response = mockMvc.perform(
+            post("/api/users/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonBody(mapOf("identifier" to user, "password" to "secreto123"))),
+        )
+            .andExpect(status().isOk)
+            .andReturn().response
+        return objectMapper.readTree(response.contentAsString).path("token").asText().also { authToken = it }
+    }
+
     private fun createGame(
         name: String = "Juego_$suffix",
         genre: String? = null,
@@ -54,6 +76,7 @@ class GameControllerIntegrationTest {
         )
         val response = mockMvc.perform(
             post("/api/games")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${token()}")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body),
         )
@@ -78,7 +101,7 @@ class GameControllerIntegrationTest {
                 "cover" to "https://cdn.com/cover.jpg",
             ),
         )
-        mockMvc.perform(post("/api/games").contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(post("/api/games").header(HttpHeaders.AUTHORIZATION, "Bearer ${token()}").contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.id").isNumber)
             .andExpect(jsonPath("$.name").value(name))
@@ -94,7 +117,7 @@ class GameControllerIntegrationTest {
         val name = "Unico_$suffix"
         createGame(name)
         val body = jsonBody(mapOf("name" to name))
-        mockMvc.perform(post("/api/games").contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(post("/api/games").header(HttpHeaders.AUTHORIZATION, "Bearer ${token()}").contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.message").value("Ya existe un juego llamado '$name'"))
     }
@@ -102,7 +125,7 @@ class GameControllerIntegrationTest {
     @Test
     fun `nombre vacio devuelve 400`() {
         val body = jsonBody(mapOf("name" to " "))
-        mockMvc.perform(post("/api/games").contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(post("/api/games").header(HttpHeaders.AUTHORIZATION, "Bearer ${token()}").contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isBadRequest)
     }
 
@@ -148,7 +171,7 @@ class GameControllerIntegrationTest {
                 "releaseDate" to "2026-01-15",
             ),
         )
-        mockMvc.perform(put("/api/games/$id").contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(put("/api/games/$id").header(HttpHeaders.AUTHORIZATION, "Bearer ${token()}").contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.name").value("Remaster_$suffix"))
             .andExpect(jsonPath("$.genre").value("RPG"))
@@ -161,14 +184,14 @@ class GameControllerIntegrationTest {
         createGame(other)
         val id = createGame("Editable_$suffix")
         val body = jsonBody(mapOf("name" to other))
-        mockMvc.perform(put("/api/games/$id").contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(put("/api/games/$id").header(HttpHeaders.AUTHORIZATION, "Bearer ${token()}").contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isConflict)
     }
 
     @Test
     fun `actualizar juego inexistente devuelve 404`() {
         val body = jsonBody(mapOf("name" to "Fantasma_$suffix"))
-        mockMvc.perform(put("/api/games/999999999").contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(put("/api/games/999999999").header(HttpHeaders.AUTHORIZATION, "Bearer ${token()}").contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isNotFound)
     }
 
@@ -177,7 +200,7 @@ class GameControllerIntegrationTest {
     @Test
     fun `borrar juego devuelve 204 y deja de existir`() {
         val id = createGame()
-        mockMvc.perform(delete("/api/games/$id"))
+        mockMvc.perform(delete("/api/games/$id").header(HttpHeaders.AUTHORIZATION, "Bearer ${token()}"))
             .andExpect(status().isNoContent)
         mockMvc.perform(get("/api/games/$id"))
             .andExpect(status().isNotFound)
@@ -185,7 +208,7 @@ class GameControllerIntegrationTest {
 
     @Test
     fun `borrar juego inexistente devuelve 404`() {
-        mockMvc.perform(delete("/api/games/999999999"))
+        mockMvc.perform(delete("/api/games/999999999").header(HttpHeaders.AUTHORIZATION, "Bearer ${token()}"))
             .andExpect(status().isNotFound)
     }
 

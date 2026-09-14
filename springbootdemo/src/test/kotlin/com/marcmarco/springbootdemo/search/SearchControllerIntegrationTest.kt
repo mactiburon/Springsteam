@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.web.servlet.MockMvc
@@ -49,9 +50,31 @@ class SearchControllerIntegrationTest {
         return objectMapper.readTree(response.contentAsString).path("id").asLong()
     }
 
+    private var authToken: String? = null
+
+    private fun token(): String {
+        authToken?.let { return it }
+        val user = "src_$suffix"
+        mockMvc.perform(
+            post("/api/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonBody(mapOf("username" to user, "email" to "src_$suffix@test.com", "password" to "secreto123"))),
+        )
+            .andExpect(status().isCreated)
+        val response = mockMvc.perform(
+            post("/api/users/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonBody(mapOf("identifier" to user, "password" to "secreto123"))),
+        )
+            .andExpect(status().isOk)
+            .andReturn().response
+        return objectMapper.readTree(response.contentAsString).path("token").asText().also { authToken = it }
+    }
+
     private fun createGame(name: String, genre: String? = null) {
         val body = jsonBody(mapOf("name" to name, "genre" to genre))
-        mockMvc.perform(post("/api/games").contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(post("/api/games").header(HttpHeaders.AUTHORIZATION, "Bearer ${token()}")
+            .contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isCreated)
     }
 

@@ -3,9 +3,12 @@ package com.marcmarco.springbootdemo.library
 import com.marcmarco.springbootdemo.library.dto.LibraryAddRequest
 import com.marcmarco.springbootdemo.library.dto.LibraryUpdateRequest
 import com.marcmarco.springbootdemo.library.dto.LibraryResponse
+import com.marcmarco.springbootdemo.security.userId
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -21,38 +24,41 @@ import org.springframework.web.bind.annotation.RestController
 class LibraryController(private val libraryService: LibraryService) {
 
     @PostMapping
-    fun add(@Valid @RequestBody request: LibraryAddRequest): ResponseEntity<LibraryResponse> {
-        val entry = libraryService.add(request)
+    fun add(
+        @AuthenticationPrincipal jwt: Jwt,
+        @Valid @RequestBody request: LibraryAddRequest,
+    ): ResponseEntity<LibraryResponse> {
+        val entry = libraryService.add(jwt.userId(), request)
         return ResponseEntity.status(HttpStatus.CREATED).body(LibraryResponse.from(entry))
     }
 
     @GetMapping
     fun search(
-        @RequestParam userId: Long,
+        @AuthenticationPrincipal jwt: Jwt,
         @RequestParam(required = false) name: String?,
         @RequestParam(required = false, defaultValue = "false") favorites: Boolean,
     ): List<LibraryResponse> =
-        libraryService.search(userId, name, favorites).map { LibraryResponse.from(it) }
+        libraryService.search(jwt.userId(), name, favorites).map { LibraryResponse.from(it) }
 
     @GetMapping("/{gameId}")
     fun getEntry(
+        @AuthenticationPrincipal jwt: Jwt,
         @PathVariable gameId: Long,
-        @RequestParam userId: Long,
-    ): LibraryResponse = LibraryResponse.from(libraryService.getEntry(userId, gameId))
+    ): LibraryResponse = LibraryResponse.from(libraryService.getEntry(jwt.userId(), gameId))
 
     @PutMapping("/{gameId}")
     fun update(
+        @AuthenticationPrincipal jwt: Jwt,
         @PathVariable gameId: Long,
-        @RequestParam userId: Long,
         @Valid @RequestBody request: LibraryUpdateRequest,
-    ): LibraryResponse = LibraryResponse.from(libraryService.update(userId, gameId, request))
+    ): LibraryResponse = LibraryResponse.from(libraryService.update(jwt.userId(), gameId, request))
 
     @DeleteMapping("/{gameId}")
     fun remove(
+        @AuthenticationPrincipal jwt: Jwt,
         @PathVariable gameId: Long,
-        @RequestParam userId: Long,
     ): ResponseEntity<Void> {
-        libraryService.remove(userId, gameId)
+        libraryService.remove(jwt.userId(), gameId)
         return ResponseEntity.noContent().build()
     }
 }

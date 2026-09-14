@@ -1,11 +1,11 @@
 package com.marcmarco.springbootdemo.chat
 
 import org.hamcrest.Matchers.hasItem
-import org.hamcrest.Matchers.not
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.web.servlet.MockMvc
@@ -34,37 +34,47 @@ class ChatControllerIntegrationTest {
     private fun jsonBody(pairs: Map<String, Any?>): String =
         objectMapper.writeValueAsString(pairs.filterValues { it != null })
 
-    private fun registerUser(prefix: String): Long {
-        val body = jsonBody(
-            mapOf(
-                "username" to "${prefix}_$suffix",
-                "email" to "${prefix}_$suffix@test.com",
-                "password" to "secreto123",
-            ),
-        )
-        val response = mockMvc.perform(
-            post("/api/users").contentType(MediaType.APPLICATION_JSON).content(body),
+    private data class Session(val userId: Long, val token: String)
+
+    private fun registerLogin(prefix: String): Session {
+        val username = "${prefix}_$suffix"
+        mockMvc.perform(
+            post("/api/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonBody(mapOf("username" to username, "email" to "${prefix}_$suffix@test.com", "password" to "secreto123"))),
         )
             .andExpect(status().isCreated)
+        val response = mockMvc.perform(
+            post("/api/users/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonBody(mapOf("identifier" to username, "password" to "secreto123"))),
+        )
+            .andExpect(status().isOk)
             .andReturn().response
-        return objectMapper.readTree(response.contentAsString).path("id").asLong()
+        val tree = objectMapper.readTree(response.contentAsString)
+        return Session(userId = tree.path("user").path("id").asLong(), token = tree.path("token").asText())
     }
 
-    private fun createConversation(userId: Long, otherId: Long, expectedStatus: Int = 201): Long {
-        val body = jsonBody(mapOf("initiatorId" to userId, "participantId" to otherId))
+    private fun createConversation(user: Session, other: Session, expectedStatus: Int = 201): Long {
+        val body = jsonBody(mapOf("participantId" to other.userId))
         val response = mockMvc.perform(
-            post("/api/conversations").contentType(MediaType.APPLICATION_JSON).content(body),
+            post("/api/conversations")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${user.token}")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body),
         )
             .andExpect(status().`is`(expectedStatus))
             .andReturn().response
         return objectMapper.readTree(response.contentAsString).path("id").asLong()
     }
 
-    private fun sendMessage(conversationId: Long, senderId: Long, content: String) {
-        val body = jsonBody(mapOf("senderId" to senderId, "content" to content))
+    private fun sendMessage(sender: Session, conversationId: Long, content: String) {
+        val body = jsonBody(mapOf("content" to content))
         mockMvc.perform(
             post("/api/conversations/$conversationId/messages")
-                .contentType(MediaType.APPLICATION_JSON).content(body),
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${sender.token}")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body),
         )
             .andExpect(status().isCreated)
     }
@@ -73,12 +83,13 @@ class ChatControllerIntegrationTest {
 
     @Test
     fun `crear conversacion devuelve 201`() {
-        val alice = registerUser("convA")
-        val bob = registerUser("convB")
+        val alice = registerLogin("convA")
+        val bob = registerLogin("convB")
         mockMvc.perform(
             post("/api/conversations")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(jsonBody(mapOf("initiatorId" to alice, "participantId" to bob))),
+                .content(jsonBody(mapOf("participantId" to bob.userId))),
         )
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.id").isNumber)
@@ -88,8 +99,8 @@ class ChatControllerIntegrationTest {
 
     @Test
     fun `conversacion ya existente en direccion inversa devuelve 200 y mismo id`() {
-        val alice = registerUser("inversA")
-        val bob = registerUser("inversB")
+        val alice = registerLogin("inversA")
+        val bob = registerLogin("inversB")
         val id = createConversation(alice, bob)
         val id2 = createConversation(bob, alice, expectedStatus = 200)
         org.junit.jupiter.api.Assertions.assertEquals(id, id2)
@@ -97,22 +108,24 @@ class ChatControllerIntegrationTest {
 
     @Test
     fun `no puedes crear conversacion contigo mismo devuelve 400`() {
-        val alice = registerUser("soloC")
+        val alice = registerLogin("soloC")
         mockMvc.perform(
             post("/api/conversations")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(jsonBody(mapOf("initiatorId" to alice, "participantId" to alice))),
+                .content(jsonBody(mapOf("participantId" to alice.userId))),
         )
             .andExpect(status().isBadRequest)
     }
 
     @Test
     fun `conversacion con usuario inexistente devuelve 404`() {
-        val alice = registerUser("fantC")
+        val alice = registerLogin("fantC")
         mockMvc.perform(
             post("/api/conversations")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(jsonBody(mapOf("initiatorId" to alice, "participantId" to 999999999))),
+                .content(jsonBody(mapOf("participantId" to 999999999))),
         )
             .andExpect(status().isNotFound)
     }
@@ -121,11 +134,11 @@ class ChatControllerIntegrationTest {
 
     @Test
     fun `listar conversaciones de un usuario incluye ultimo mensaje`() {
-        val alice = registerUser("listConvA")
-        val bob = registerUser("listConvB")
+        val alice = registerLogin("listConvA")
+        val bob = registerLogin("listConvB")
         val id = createConversation(alice, bob)
-        sendMessage(id, alice, "Hola Bob!")
-        mockMvc.perform(get("/api/conversations").param("userId", alice.toString()))
+        sendMessage(alice, id, "Hola Bob!")
+        mockMvc.perform(get("/api/conversations").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$[*].id", hasItem(id.toInt())))
             .andExpect(jsonPath("$[0].lastMessage.content").value("Hola Bob!"))
@@ -133,19 +146,27 @@ class ChatControllerIntegrationTest {
 
     @Test
     fun `conversacion entre dos usuarios devuelve 200`() {
-        val alice = registerUser("entreA")
-        val bob = registerUser("entreB")
+        val alice = registerLogin("entreA")
+        val bob = registerLogin("entreB")
         createConversation(alice, bob)
-        mockMvc.perform(get("/api/conversations/between").param("userId", alice.toString()).param("otherUserId", bob.toString()))
+        mockMvc.perform(
+            get("/api/conversations/between")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
+                .param("otherUserId", bob.userId.toString()),
+        )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.initiator.username").value("entreA_$suffix"))
     }
 
     @Test
     fun `conversacion entre inexistentes devuelve 404`() {
-        val alice = registerUser("noentreA")
-        val bob = registerUser("noentreB")
-        mockMvc.perform(get("/api/conversations/between").param("userId", alice.toString()).param("otherUserId", bob.toString()))
+        val alice = registerLogin("noentreA")
+        val bob = registerLogin("noentreB")
+        mockMvc.perform(
+            get("/api/conversations/between")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
+                .param("otherUserId", bob.userId.toString()),
+        )
             .andExpect(status().isNotFound)
     }
 
@@ -153,56 +174,62 @@ class ChatControllerIntegrationTest {
 
     @Test
     fun `enviar mensaje devuelve 201`() {
-        val alice = registerUser("msgA")
-        val bob = registerUser("msgB")
+        val alice = registerLogin("msgA")
+        val bob = registerLogin("msgB")
         val id = createConversation(alice, bob)
         mockMvc.perform(
             post("/api/conversations/$id/messages")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(jsonBody(mapOf("senderId" to alice, "content" to "Primer hola"))),
+                .content(jsonBody(mapOf("content" to "Primer hola"))),
         )
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.content").value("Primer hola"))
-            .andExpect(jsonPath("$.senderId").value(alice))
+            .andExpect(jsonPath("$.senderId").value(alice.userId))
             .andExpect(jsonPath("$.conversationId").value(id))
     }
 
     @Test
     fun `un tercero no puede enviar en la conversacion devuelve 400`() {
-        val alice = registerUser("terConeA")
-        val bob = registerUser("terConeB")
-        val carol = registerUser("terConeC")
+        val alice = registerLogin("terConeA")
+        val bob = registerLogin("terConeB")
+        val carol = registerLogin("terConeC")
         val id = createConversation(alice, bob)
         mockMvc.perform(
             post("/api/conversations/$id/messages")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${carol.token}")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(jsonBody(mapOf("senderId" to carol, "content" to "intruso"))),
+                .content(jsonBody(mapOf("content" to "intruso"))),
         )
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.message").value("El usuario $carol no participa en esta conversación"))
+            .andExpect(jsonPath("$.message").value("El usuario ${carol.userId} no participa en esta conversación"))
     }
 
     @Test
     fun `mensaje vacio devuelve 400`() {
-        val alice = registerUser("vacioM")
-        val bob = registerUser("vacioM2")
+        val alice = registerLogin("vacioM")
+        val bob = registerLogin("vacioM2")
         val id = createConversation(alice, bob)
         mockMvc.perform(
             post("/api/conversations/$id/messages")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(jsonBody(mapOf("senderId" to alice, "content" to " "))),
+                .content(jsonBody(mapOf("content" to " "))),
         )
             .andExpect(status().isBadRequest)
     }
 
     @Test
     fun `listar mensajes devuelve historial en orden`() {
-        val alice = registerUser("histA")
-        val bob = registerUser("histB")
+        val alice = registerLogin("histA")
+        val bob = registerLogin("histB")
         val id = createConversation(alice, bob)
-        sendMessage(id, alice, "msg uno")
-        sendMessage(id, bob, "msg dos")
-        mockMvc.perform(get("/api/conversations/$id/messages").param("userId", alice.toString()))
+        sendMessage(alice, id, "msg uno")
+        sendMessage(bob, id, "msg dos")
+        mockMvc.perform(
+            get("/api/conversations/$id/messages")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}"),
+        )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$[*].content", hasItem("msg uno")))
             .andExpect(jsonPath("$[*].content", hasItem("msg dos")))
@@ -210,19 +237,25 @@ class ChatControllerIntegrationTest {
 
     @Test
     fun `un tercero no puede leer mensajes devuelve 400`() {
-        val alice = registerUser("nolectA")
-        val bob = registerUser("nolectB")
-        val carol = registerUser("nolectC")
+        val alice = registerLogin("nolectA")
+        val bob = registerLogin("nolectB")
+        val carol = registerLogin("nolectC")
         val id = createConversation(alice, bob)
-        sendMessage(id, alice, "privado")
-        mockMvc.perform(get("/api/conversations/$id/messages").param("userId", carol.toString()))
+        sendMessage(alice, id, "privado")
+        mockMvc.perform(
+            get("/api/conversations/$id/messages")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${carol.token}"),
+        )
             .andExpect(status().isBadRequest)
     }
 
     @Test
     fun `conversacion inexistente devuelve 404`() {
-        val alice = registerUser("falle")
-        mockMvc.perform(get("/api/conversations/999999999/messages").param("userId", alice.toString()))
+        val alice = registerLogin("falle")
+        mockMvc.perform(
+            get("/api/conversations/999999999/messages")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}"),
+        )
             .andExpect(status().isNotFound)
     }
 }

@@ -12,7 +12,7 @@ Docker, Kafka y microservicios.
 | Framework | Spring Boot 4.1.1 |
 | Persistencia | Spring Data JPA / Hibernate 7 |
 | Base de datos | PostgreSQL (Supabase) en dev · H2 en memoria en tests |
-| Seguridad | Spring Security (BCrypt) — JWT próximo (Fase 9) |
+| Seguridad | Spring Security (BCrypt) + JWT HS256 (Fase 9) |
 | Tests | JUnit 5 + MockMvc |
 
 ## 🗺️ Arquitectura y evolución
@@ -57,7 +57,7 @@ Cada módulo sigue el patrón **Entity → Repository → Service → Controller
 | 🔎 Búsqueda | ✅ Hecho | Búsqueda global + autocompletado |
 | 💬 Chat | ✅ Hecho | Conversaciones + mensajería WebSocket |
 | 🔔 Notificaciones | ✅ Hecho | Avisos generados por amigos y chat |
-| 🔐 Seguridad | ⏳ Pendiente | JWT (protocolo de la Fase 9) |
+| 🔐 Seguridad | ✅ Hecho | Registro/login con JWT HS256 y endpoints protegidos |
 | ⚙️ Configuración | ⏳ Pendiente | Ajustes de cuenta |
 
 ## 📁 Estructura del proyecto
@@ -79,7 +79,7 @@ springbootdemo/
 │   │   └── dto/           # Request/Response del chat
 │   ├── notification/      # Notificaciones (Fase 8)
 │   │   └── dto/           # Response de notificaciones
-│   └── (próximos)         # seguridad, configuración
+│   └── security/          # JWT (Fase 9): encoder/decoder, login y auth STOMP
 └── src/test/kotlin/.../   # Tests de integración (MockMvc)
 ```
 
@@ -165,7 +165,8 @@ consulta JPQL parametrizada que ignora los filtros vacíos (`IS NULL OR LIKE`).
 | PUT | `/api/library/{gameId}` | Actualizar favorito / horas | 200 · 404 |
 | DELETE | `/api/library/{gameId}` | Quitar de biblioteca | 204 · 404 |
 
-Todos los endpoints llevan `?userId=` como parámetro requerido (hasta la Fase 9 con JWT).
+Desde la Fase 9 el usuario autenticado se identifica con el **JWT (Bearer)** — ya no se
+envía `?userId=`.
 
 **Filtros de lista** (combinables):
 `?name=` (nombre del juego) · `?favorites=true` (solo marcados como favorito)
@@ -177,10 +178,10 @@ un `Double` (soporta decimales para sesiones parciales).
 
 | Método | Ruta | Descripción | Códigos |
 |--------|------|-------------|---------|
-| POST | `/api/friendships` | Enviar solicitud (`requesterId`, `addresseeId`) | 201 · 400 · 404 · 409 |
-| GET | `/api/friendships` | Listar relaciones de un usuario | 200 |
+| POST | `/api/friendships` | Enviar solicitud (body `{addresseeId}`) | 201 · 400 · 404 · 409 |
+| GET | `/api/friendships` | Listar relaciones del usuario autenticado | 200 |
 | GET | `/api/friendships/{id}` | Detalle de una relación | 200 · 404 |
-| PUT | `/api/friendships/{id}/accept` | Aceptar solicitud (`?userId=` del destinatario) | 200 · 400 · 404 · 409 |
+| PUT | `/api/friendships/{id}/accept` | Aceptar solicitud (solo el destinatario) | 200 · 400 · 404 · 409 |
 | PUT | `/api/friendships/{id}/block` | Bloquear al otro usuario | 200 · 400 · 404 |
 | DELETE | `/api/friendships/{id}` | Eliminar relación (cancelar/desamistar) | 204 · 400 · 404 |
 
@@ -194,8 +195,8 @@ La relación es **unidireccional por pareja**: no puede existir a la vez A→B y
 
 | Método | Ruta | Descripción | Códigos |
 |--------|------|-------------|---------|
-| PUT | `/api/nicknames/{targetId}` | Poner/actualizar mote (`?userId=`, body `{nickname}`) | 200 · 400 · 404 |
-| GET | `/api/nicknames` | Listar los motes de un usuario | 200 |
+| PUT | `/api/nicknames/{targetId}` | Poner/actualizar mote (body `{nickname}`) | 200 · 400 · 404 |
+| GET | `/api/nicknames` | Listar los motes del usuario autenticado | 200 |
 | GET | `/api/nicknames/{targetId}` | Obtener un mote concreto | 200 · 404 |
 | DELETE | `/api/nicknames/{targetId}` | Borrar un mote | 204 · 404 |
 
@@ -229,10 +230,10 @@ publisher**, y usuarios por **username y displayName**. Query vacía → listas 
 | Método | Ruta | Descripción | Códigos |
 |--------|------|-------------|---------|
 | POST | `/api/conversations` | Crear conversación (o devolver la existente) | 201 · 200 · 400 · 404 |
-| GET | `/api/conversations?userId=` | Conversaciones de un usuario (con último mensaje) | 200 |
-| GET | `/api/conversations/between?userId=&otherUserId=` | Conversación directa o 404 si no existe | 200 · 404 |
-| GET | `/api/conversations/{id}/messages?userId=&limit=` | Historial de mensajes (default `limit=100`) | 200 · 400 · 404 |
-| POST | `/api/conversations/{id}/messages` | Enviar mensaje y **broadcast STOMP** (`senderId`, `content`) | 201 · 400 · 404 |
+| GET | `/api/conversations` | Conversaciones del usuario autenticado (con último mensaje) | 200 |
+| GET | `/api/conversations/between?otherUserId=` | Conversación directa o 404 si no existe | 200 · 404 |
+| GET | `/api/conversations/{id}/messages?limit=` | Historial de mensajes (default `limit=100`) | 200 · 400 · 404 |
+| POST | `/api/conversations/{id}/messages` | Enviar mensaje y **broadcast STOMP** (body `{content}`) | 201 · 400 · 404 |
 
 `POST /api/conversations` es **idempotente**: si ya existe una conversación entre los dos
 usuarios devuelve `200` con la existente; si no, la crea con `201`.
@@ -241,7 +242,8 @@ usuarios devuelve `200` con la existente; si no, la crea con `201`.
 
 - Endpoint de *handshake*: `ws://localhost:8080/ws`
 - Suscribirse al historial: `/topic/conversations/{id}`
-- Enviar un mensaje: tema `/app/chat/{id}` con body `{ "senderId": ..., "content": "..." }`
+- Enviar un mensaje: tema `/app/chat/{id}` con body `{ "content": "..." }`
+- El CONNECT del handshake debe autenticarse con el JWT (cabecera `Authorization: Bearer ...`)
 
 Cada mensaje se **persiste antes** de notificar, así que quien se conecte después puede
 recuperar el historial por REST. El broadcast llega a todos los suscritos al topic de la
@@ -251,12 +253,12 @@ conversación.
 
 | Método | Ruta | Descripción | Códigos |
 |--------|------|-------------|---------|
-| GET | `/api/notifications?userId=` | Listar notificaciones (más recientes primero) | 200 · 404 |
-| GET | `/api/notifications/unread-count?userId=` | Nº de no leídas `{ "count": n }` | 200 · 404 |
-| GET | `/api/notifications/{id}?userId=` | Detalle de una notificación (solo destinatario) | 200 · 404 |
-| PUT | `/api/notifications/{id}/read?userId=` | Marcar como leída | 200 · 404 |
-| PUT | `/api/notifications/read-all?userId=` | Marcar todas como leídas | 200 · 404 |
-| DELETE | `/api/notifications/{id}?userId=` | Eliminar una notificación | 204 · 404 |
+| GET | `/api/notifications` | Listar notificaciones del usuario autenticado (más recientes primero) | 200 · 401 |
+| GET | `/api/notifications/unread-count` | Nº de no leídas `{ "count": n }` | 200 · 401 |
+| GET | `/api/notifications/{id}` | Detalle de una notificación (solo destinatario) | 200 · 401 · 404 |
+| PUT | `/api/notifications/{id}/read` | Marcar como leída | 200 · 401 · 404 |
+| PUT | `/api/notifications/read-all` | Marcar todas como leídas | 200 · 401 |
+| DELETE | `/api/notifications/{id}` | Eliminar una notificación | 204 · 401 · 404 |
 
 Las notificaciones **no se crean por API**: las genera el sistema de forma automática y
 transaccional cuando ocurre un evento:
@@ -270,6 +272,47 @@ Cada notificación incluye `type`, `message` legible, `actor` (quién la causó)
 lectura se hace contra la propia notificación: solo el destinatario puede verla,
 marcarla como leída o borrarla (un tercero obtiene `404`).
 
+## 🔌 API — Fase 9 (Seguridad y JWT)
+
+Toda la API (salvo los puntos abiertos abajo) exige autenticación con un JWT en la
+cabecera `Authorization: Bearer <token>`.
+
+### Asignación de identidad
+
+Los endpoints que antes recibían `?userId=`, `senderId`, `requesterId` o `initiatorId`
+ahora derivan el usuario **del token** (`sub` = id de usuario), así que el cliente solo
+envía los datos de negocio:
+
+- `POST /api/friendships` → body `{ "addresseeId": n }`
+- `POST /api/conversations` → body `{ "participantId": n }`
+- `POST /api/conversations/{id}/messages` → body `{ "content": "..." }`
+- `PUT /api/nicknames/{targetId}` → body `{ "nickname": "..." }`
+
+### Endpoints públicos
+
+| Método | Ruta |
+|--------|------|
+| POST | `/api/users` (registro) |
+| POST | `/api/users/login` (devuelve el JWT) |
+| GET | `/api/users/**` |
+| GET | `/api/games/**` |
+| GET | `/api/search/**` |
+
+El resto requiere `Bearer`. `POST /api/users/login` (username o email + password) devuelve:
+
+```json
+{ "token": "...", "tokenType": "Bearer", "expiresIn": 86400, "user": { /* UserResponse */ } }
+```
+
+> ⚠️ En producción define `JWT_SECRET` (≥ 32 caracteres) en `.env`. El valor de desarrollo
+> (`dev-only-jwt-secret...`) solo sirve para pruebas locales.
+
+### WebSocket
+
+El *handshake* `/ws` y el frame STOMP `CONNECT` deben llevar la cabecera
+`Authorization: Bearer <token>`; la sesión queda autenticada y el autor de cada mensaje
+se toma del JWT.
+
 ## 📜 Roadmap
 
 - [x] **Fase 0** — Configuración base (`.env`, estructura de paquetes)
@@ -281,7 +324,7 @@ marcarla como leída o borrarla (un tercero obtiene `404`).
 - [x] **Fase 6** — 🔎 Búsqueda (+ tests de integración)
 - [x] **Fase 7** — 💬 Chat (WebSocket) (+ tests de integración)
 - [x] **Fase 8** — 🔔 Notificaciones (+ tests de integración)
-- [ ] **Fase 9** — 🔐 Seguridad (JWT)
+- [x] **Fase 9** — 🔐 Seguridad (JWT)
 - [ ] **Fase 10** — ⚙️ Configuración de cuenta
 - [ ] **Etapa 2** — 🐳 Docker
 - [ ] **Etapa 3** — 📨 Kafka

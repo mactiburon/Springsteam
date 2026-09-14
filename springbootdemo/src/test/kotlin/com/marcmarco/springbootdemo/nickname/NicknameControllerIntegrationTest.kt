@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.web.servlet.MockMvc
@@ -36,31 +37,42 @@ class NicknameControllerIntegrationTest {
     private fun jsonBody(pairs: Map<String, Any?>): String =
         objectMapper.writeValueAsString(pairs.filterValues { it != null })
 
-    private fun registerUser(prefix: String): Long {
-        val body = jsonBody(
-            mapOf(
-                "username" to "${prefix}_$suffix",
-                "email" to "${prefix}_$suffix@test.com",
-                "password" to "secreto123",
-            ),
-        )
-        val response = mockMvc.perform(
-            post("/api/users").contentType(MediaType.APPLICATION_JSON).content(body),
+    private data class Session(val userId: Long, val token: String)
+
+    private fun registerLogin(prefix: String): Session {
+        val username = "${prefix}_$suffix"
+        mockMvc.perform(
+            post("/api/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonBody(mapOf("username" to username, "email" to "${prefix}_$suffix@test.com", "password" to "secreto123"))),
         )
             .andExpect(status().isCreated)
+        val response = mockMvc.perform(
+            post("/api/users/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonBody(mapOf("identifier" to username, "password" to "secreto123"))),
+        )
+            .andExpect(status().isOk)
             .andReturn().response
-        return objectMapper.readTree(response.contentAsString).path("id").asLong()
+        val tree = objectMapper.readTree(response.contentAsString)
+        return Session(userId = tree.path("user").path("id").asLong(), token = tree.path("token").asText())
     }
 
-    private fun makeFriends(userId: Long, otherId: Long) {
-        val request = jsonBody(mapOf("requesterId" to userId, "addresseeId" to otherId))
+    private fun makeFriends(owner: Session, target: Session) {
+        val request = jsonBody(mapOf("addresseeId" to target.userId))
         val response = mockMvc.perform(
-            post("/api/friendships").contentType(MediaType.APPLICATION_JSON).content(request),
+            post("/api/friendships")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${owner.token}")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request),
         )
             .andExpect(status().isCreated)
             .andReturn().response
         val friendshipId = objectMapper.readTree(response.contentAsString).path("id").asLong()
-        mockMvc.perform(put("/api/friendships/$friendshipId/accept").param("userId", otherId.toString()))
+        mockMvc.perform(
+            put("/api/friendships/$friendshipId/accept")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${target.token}"),
+        )
             .andExpect(status().isOk)
     }
 
@@ -68,34 +80,34 @@ class NicknameControllerIntegrationTest {
 
     @Test
     fun `poner mote a un amigo devuelve 200`() {
-        val alice = registerUser("moteA")
-        val bob = registerUser("moteB")
+        val alice = registerLogin("moteA")
+        val bob = registerLogin("moteB")
         makeFriends(alice, bob)
         mockMvc.perform(
-            put("/api/nicknames/$bob")
-                .param("userId", alice.toString())
+            put("/api/nicknames/${bob.userId}")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonBody(mapOf("nickname" to "El Rápido"))),
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.nickname").value("El Rápido"))
-            .andExpect(jsonPath("$.ownerId").value(alice))
-            .andExpect(jsonPath("$.targetId").value(bob))
+            .andExpect(jsonPath("$.ownerId").value(alice.userId))
+            .andExpect(jsonPath("$.targetId").value(bob.userId))
             .andExpect(jsonPath("$.target.username").value("moteB_$suffix"))
     }
 
     @Test
     fun `renovar el mote sobrescribe el valor anterior`() {
-        val alice = registerUser("renewA")
-        val bob = registerUser("renewB")
+        val alice = registerLogin("renewA")
+        val bob = registerLogin("renewB")
         makeFriends(alice, bob)
         val putBody = jsonBody(mapOf("nickname" to "Primero"))
         mockMvc.perform(
-            put("/api/nicknames/$bob").param("userId", alice.toString())
+            put("/api/nicknames/${bob.userId}").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
                 .contentType(MediaType.APPLICATION_JSON).content(putBody),
         ).andExpect(status().isOk)
         mockMvc.perform(
-            put("/api/nicknames/$bob").param("userId", alice.toString())
+            put("/api/nicknames/${bob.userId}").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonBody(mapOf("nickname" to "Segundo"))),
         )
@@ -105,10 +117,10 @@ class NicknameControllerIntegrationTest {
 
     @Test
     fun `no puedes ponerte un mote a ti mismo devuelve 400`() {
-        val alice = registerUser("autof")
+        val alice = registerLogin("autof")
         mockMvc.perform(
-            put("/api/nicknames/$alice")
-                .param("userId", alice.toString())
+            put("/api/nicknames/${alice.userId}")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonBody(mapOf("nickname" to "Solo"))),
         )
@@ -117,11 +129,11 @@ class NicknameControllerIntegrationTest {
 
     @Test
     fun `poner mote a un no amigo devuelve 400`() {
-        val alice = registerUser("noamiA")
-        val carol = registerUser("noamiC")
+        val alice = registerLogin("noamiA")
+        val carol = registerLogin("noamiC")
         mockMvc.perform(
-            put("/api/nicknames/$carol")
-                .param("userId", alice.toString())
+            put("/api/nicknames/${carol.userId}")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonBody(mapOf("nickname" to "Intruso"))),
         )
@@ -131,10 +143,10 @@ class NicknameControllerIntegrationTest {
 
     @Test
     fun `poner mote a usuario inexistente devuelve 404`() {
-        val alice = registerUser("fantas")
+        val alice = registerLogin("fantas")
         mockMvc.perform(
             put("/api/nicknames/999999999")
-                .param("userId", alice.toString())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonBody(mapOf("nickname" to "Fantasma"))),
         )
@@ -143,12 +155,12 @@ class NicknameControllerIntegrationTest {
 
     @Test
     fun `mote vacio devuelve 400`() {
-        val alice = registerUser("vacioA")
-        val bob = registerUser("vacioB")
+        val alice = registerLogin("vacioA")
+        val bob = registerLogin("vacioB")
         makeFriends(alice, bob)
         mockMvc.perform(
-            put("/api/nicknames/$bob")
-                .param("userId", alice.toString())
+            put("/api/nicknames/${bob.userId}")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonBody(mapOf("nickname" to " "))),
         )
@@ -159,43 +171,43 @@ class NicknameControllerIntegrationTest {
 
     @Test
     fun `obtener mote por targetId devuelve 200`() {
-        val alice = registerUser("getmoteA")
-        val bob = registerUser("getmoteB")
+        val alice = registerLogin("getmoteA")
+        val bob = registerLogin("getmoteB")
         makeFriends(alice, bob)
         mockMvc.perform(
-            put("/api/nicknames/$bob").param("userId", alice.toString())
+            put("/api/nicknames/${bob.userId}").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
                 .contentType(MediaType.APPLICATION_JSON).content(jsonBody(mapOf("nickname" to "Cuñao"))),
         ).andExpect(status().isOk)
-        mockMvc.perform(get("/api/nicknames/$bob").param("userId", alice.toString()))
+        mockMvc.perform(get("/api/nicknames/${bob.userId}").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.nickname").value("Cuñao"))
     }
 
     @Test
     fun `obtener mote inexistente devuelve 404`() {
-        val alice = registerUser("nomoteA")
-        val bob = registerUser("nomoteB")
+        val alice = registerLogin("nomoteA")
+        val bob = registerLogin("nomoteB")
         makeFriends(alice, bob)
-        mockMvc.perform(get("/api/nicknames/$bob").param("userId", alice.toString()))
+        mockMvc.perform(get("/api/nicknames/${bob.userId}").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}"))
             .andExpect(status().isNotFound)
     }
 
     @Test
     fun `listar motes devuelve todos los del usuario`() {
-        val alice = registerUser("listaA")
-        val bob = registerUser("listaB")
-        val carol = registerUser("listaC")
+        val alice = registerLogin("listaA")
+        val bob = registerLogin("listaB")
+        val carol = registerLogin("listaC")
         makeFriends(alice, bob)
         makeFriends(alice, carol)
         mockMvc.perform(
-            put("/api/nicknames/$bob").param("userId", alice.toString())
+            put("/api/nicknames/${bob.userId}").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
                 .contentType(MediaType.APPLICATION_JSON).content(jsonBody(mapOf("nickname" to "Listo1"))),
         ).andExpect(status().isOk)
         mockMvc.perform(
-            put("/api/nicknames/$carol").param("userId", alice.toString())
+            put("/api/nicknames/${carol.userId}").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
                 .contentType(MediaType.APPLICATION_JSON).content(jsonBody(mapOf("nickname" to "Listo2"))),
         ).andExpect(status().isOk)
-        mockMvc.perform(get("/api/nicknames").param("userId", alice.toString()))
+        mockMvc.perform(get("/api/nicknames").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$[*].nickname", hasItem("Listo1")))
             .andExpect(jsonPath("$[*].nickname", hasItem("Listo2")))
@@ -203,20 +215,20 @@ class NicknameControllerIntegrationTest {
 
     @Test
     fun `los motes son privados de cada usuario`() {
-        val alice = registerUser("privA")
-        val bob = registerUser("privB")
-        val carol = registerUser("privC")
+        val alice = registerLogin("privA")
+        val bob = registerLogin("privB")
+        val carol = registerLogin("privC")
         makeFriends(alice, bob)
         makeFriends(carol, bob)
         mockMvc.perform(
-            put("/api/nicknames/$bob").param("userId", alice.toString())
+            put("/api/nicknames/${bob.userId}").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
                 .contentType(MediaType.APPLICATION_JSON).content(jsonBody(mapOf("nickname" to "SecretoA"))),
         ).andExpect(status().isOk)
         mockMvc.perform(
-            put("/api/nicknames/$bob").param("userId", carol.toString())
+            put("/api/nicknames/${bob.userId}").header(HttpHeaders.AUTHORIZATION, "Bearer ${carol.token}")
                 .contentType(MediaType.APPLICATION_JSON).content(jsonBody(mapOf("nickname" to "SecretoC"))),
         ).andExpect(status().isOk)
-        mockMvc.perform(get("/api/nicknames").param("userId", alice.toString()))
+        mockMvc.perform(get("/api/nicknames").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$[*].nickname", hasItem("SecretoA")))
             .andExpect(jsonPath("$[*].nickname", not(hasItem("SecretoC"))))
@@ -224,8 +236,8 @@ class NicknameControllerIntegrationTest {
 
     @Test
     fun `listar sin motes devuelve lista vacia`() {
-        val alice = registerUser("vacia")
-        mockMvc.perform(get("/api/nicknames").param("userId", alice.toString()))
+        val alice = registerLogin("vacia")
+        mockMvc.perform(get("/api/nicknames").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.length()").value(0))
     }
@@ -234,25 +246,25 @@ class NicknameControllerIntegrationTest {
 
     @Test
     fun `borrar mote devuelve 204 y deja de existir`() {
-        val alice = registerUser("delA")
-        val bob = registerUser("delB")
+        val alice = registerLogin("delA")
+        val bob = registerLogin("delB")
         makeFriends(alice, bob)
         mockMvc.perform(
-            put("/api/nicknames/$bob").param("userId", alice.toString())
+            put("/api/nicknames/${bob.userId}").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}")
                 .contentType(MediaType.APPLICATION_JSON).content(jsonBody(mapOf("nickname" to "Efimero"))),
         ).andExpect(status().isOk)
-        mockMvc.perform(delete("/api/nicknames/$bob").param("userId", alice.toString()))
+        mockMvc.perform(delete("/api/nicknames/${bob.userId}").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}"))
             .andExpect(status().isNoContent)
-        mockMvc.perform(get("/api/nicknames/$bob").param("userId", alice.toString()))
+        mockMvc.perform(get("/api/nicknames/${bob.userId}").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}"))
             .andExpect(status().isNotFound)
     }
 
     @Test
     fun `borrar mote inexistente devuelve 404`() {
-        val alice = registerUser("delnoA")
-        val bob = registerUser("delnoB")
+        val alice = registerLogin("delnoA")
+        val bob = registerLogin("delnoB")
         makeFriends(alice, bob)
-        mockMvc.perform(delete("/api/nicknames/$bob").param("userId", alice.toString()))
+        mockMvc.perform(delete("/api/nicknames/${bob.userId}").header(HttpHeaders.AUTHORIZATION, "Bearer ${alice.token}"))
             .andExpect(status().isNotFound)
     }
 }

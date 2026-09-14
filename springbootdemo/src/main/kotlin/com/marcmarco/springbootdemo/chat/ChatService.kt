@@ -3,7 +3,6 @@ package com.marcmarco.springbootdemo.chat
 import com.marcmarco.springbootdemo.common.exception.BadRequestException
 import com.marcmarco.springbootdemo.common.exception.NotFoundException
 import com.marcmarco.springbootdemo.chat.dto.ConversationRequest
-import com.marcmarco.springbootdemo.chat.dto.MessageRequest
 import com.marcmarco.springbootdemo.notification.NotificationService
 import com.marcmarco.springbootdemo.notification.NotificationType
 import com.marcmarco.springbootdemo.user.UserRepository
@@ -25,23 +24,24 @@ class ChatService(
         conversation.initiator.id == userId || conversation.participant.id == userId
 
     /**
-     * Devuelve la conversación entre dos usuarios. Si ya existe (en cualquiera de las dos
-     * direcciones) la reutiliza; si no, la crea. Idempotente por diseño.
+     * Devuelve la conversación entre el usuario autenticado y [request.participantId].
+     * Si ya existe (en cualquiera de las dos direcciones) la reutiliza; si no, la crea.
+     * Idempotente por diseño.
      */
-    fun getOrCreateConversation(request: ConversationRequest): Pair<Conversation, Boolean> {
-        if (request.initiatorId == request.participantId) {
+    fun getOrCreateConversation(userId: Long, request: ConversationRequest): Pair<Conversation, Boolean> {
+        if (userId == request.participantId) {
             throw BadRequestException("No puedes crear una conversación contigo mismo")
         }
-        findUser(request.initiatorId)
+        findUser(userId)
         findUser(request.participantId)
 
-        conversationRepository.findBetween(request.initiatorId, request.participantId)?.let {
+        conversationRepository.findBetween(userId, request.participantId)?.let {
             return Pair(it, false)
         }
 
         val conversation = conversationRepository.save(
             Conversation(
-                initiator = findUser(request.initiatorId),
+                initiator = findUser(userId),
                 participant = findUser(request.participantId),
             ),
         )
@@ -63,14 +63,14 @@ class ChatService(
         return conversationRepository.findForUser(userId)
     }
 
-    fun saveMessage(conversationId: Long, request: MessageRequest): Message {
+    fun saveMessage(conversationId: Long, senderId: Long, content: String): Message {
         val conversation = getConversation(conversationId)
-        if (!isParticipant(conversation, request.senderId)) {
-            throw BadRequestException("El usuario ${request.senderId} no participa en esta conversación")
+        if (!isParticipant(conversation, senderId)) {
+            throw BadRequestException("El usuario $senderId no participa en esta conversación")
         }
-        val sender = findUser(request.senderId)
+        val sender = findUser(senderId)
         val message = messageRepository.save(
-            Message(conversation = conversation, sender = sender, content = request.content.trim()),
+            Message(conversation = conversation, sender = sender, content = content.trim()),
         )
         val recipient = if (conversation.initiator.id == sender.id) conversation.participant else conversation.initiator
         notificationService.create(
