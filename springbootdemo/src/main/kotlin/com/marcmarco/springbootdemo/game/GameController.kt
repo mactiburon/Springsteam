@@ -1,7 +1,9 @@
 package com.marcmarco.springbootdemo.game
 
+import com.marcmarco.springbootdemo.common.exception.BadRequestException
 import com.marcmarco.springbootdemo.game.dto.GameRequest
 import com.marcmarco.springbootdemo.game.dto.GameResponse
+import com.marcmarco.springbootdemo.game.dto.ImportResponse
 import jakarta.validation.Valid
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.HttpStatus
@@ -19,7 +21,20 @@ import java.time.LocalDate
 
 @RestController
 @RequestMapping("/api/games")
-class GameController(private val gameService: GameService) {
+class GameController(
+    private val gameService: GameService,
+    private val gameImportService: GameImportService,
+) {
+
+    @PostMapping("/import")
+    fun importGames(
+        @RequestParam(defaultValue = "40") count: Int,
+    ): ImportResponse {
+        if (count !in 1..100) {
+            throw BadRequestException("count debe estar entre 1 y 100")
+        }
+        return gameImportService.importGames(count)
+    }
 
     @PostMapping
     fun create(@Valid @RequestBody request: GameRequest): ResponseEntity<GameResponse> {

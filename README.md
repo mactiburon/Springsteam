@@ -175,6 +175,7 @@ Respuestas de error con formato uniforme:
 | Método | Ruta | Descripción | Códigos |
 |--------|------|-------------|---------|
 | POST | `/api/games` | Crear juego | 201 · 400 · 409 |
+| POST | `/api/games/import?count=` | Importar juegos desde RAWG (idempotente) | 200 · 400 |
 | GET | `/api/games` | Listar/buscar con filtros | 200 |
 | GET | `/api/games/{id}` | Juego por id | 200 · 404 |
 | PUT | `/api/games/{id}` | Actualizar juego (todos los campos) | 200 · 404 · 409 |
@@ -185,6 +186,14 @@ Respuestas de error con formato uniforme:
 
 La búsqueda es *case-insensitive* y parcial (contiene el texto), con una sola
 consulta JPQL parametrizada que ignora los filtros vacíos (`IS NULL OR LIKE`).
+
+### Importación desde RAWG
+
+`POST /api/games/import?count=40` (exige `Bearer`, `count` de 1 a 100) rellena el
+catálogo desde la [API de RAWG](https://rawg.io/apidocs) (key gratuita en `RAWG_API_KEY`
+del `.env`). Es **idempotente**: no duplica juegos por nombre (case-insensitive). Mapea
+`name`, `released`→`releaseDate`, `background_image`→`cover`, y el primer `genre`,
+`developer` y `publisher`. Sin key configurada devuelve `400`.
 
 ## 🔌 API — Fase 3 (Biblioteca)
 

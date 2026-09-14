@@ -9,6 +9,8 @@ interface GameRepository : JpaRepository<Game, Long> {
 
     fun existsByName(name: String): Boolean
 
+    fun existsByNameIgnoreCase(name: String): Boolean
+
     @Query(
         """
         SELECT g FROM Game g
