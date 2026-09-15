@@ -37,6 +37,8 @@ class LibraryService(
                 game = game,
                 isFavorite = request.isFavorite ?: false,
                 hoursPlayed = request.hoursPlayed ?: 0.0,
+                status = request.status ?: LibraryStatus.PENDING,
+                lastPlayedAt = request.lastPlayedAt,
             ),
         )
         eventPublisher?.publish(
@@ -56,6 +58,8 @@ class LibraryService(
         val entry = getEntry(userId, gameId)
         request.isFavorite?.let { entry.isFavorite = it }
         request.hoursPlayed?.let { entry.hoursPlayed = it }
+        request.status?.let { entry.status = it }
+        request.lastPlayedAt?.let { entry.lastPlayedAt = it }
         val updated = libraryRepository.save(entry)
         eventPublisher?.publish(
             topic = Topics.LIBRARY_EVENTS,
@@ -89,4 +93,6 @@ private fun LibraryEntry.toEventPayload(): Map<String, Any?> = mapOf(
     "gameId" to (game.id ?: 0L),
     "isFavorite" to isFavorite,
     "hoursPlayed" to hoursPlayed,
+    "status" to status.name,
+    "lastPlayedAt" to lastPlayedAt?.toString(),
 )

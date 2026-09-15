@@ -2,6 +2,7 @@ package com.marcmarco.library.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.marcmarco.library.LibraryEntry
+import com.marcmarco.library.LibraryStatus
 import java.time.Instant
 
 data class LibraryResponse(
@@ -11,6 +12,8 @@ data class LibraryResponse(
     @field:JsonProperty("isFavorite")
     val isFavorite: Boolean,
     val hoursPlayed: Double,
+    val status: LibraryStatus,
+    val lastPlayedAt: Instant?,
     val addedAt: Instant,
 ) {
     companion object {
@@ -20,6 +23,8 @@ data class LibraryResponse(
             game = GameResponse.from(entry.game),
             isFavorite = entry.isFavorite,
             hoursPlayed = entry.hoursPlayed,
+            status = entry.status,
+            lastPlayedAt = entry.lastPlayedAt,
             addedAt = entry.addedAt,
         )
     }

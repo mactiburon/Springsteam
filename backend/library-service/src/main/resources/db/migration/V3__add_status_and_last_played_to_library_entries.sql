@@ -1,0 +1,3 @@
+ALTER TABLE library_entries ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'PENDING';
+
+ALTER TABLE library_entries ADD COLUMN last_played_at TIMESTAMP WITH TIME ZONE;

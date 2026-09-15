@@ -2,6 +2,8 @@ package com.marcmarco.library
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
@@ -33,6 +35,13 @@ class LibraryEntry(
 
     @Column(name = "hours_played")
     var hoursPlayed: Double = 0.0,
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    var status: LibraryStatus = LibraryStatus.PENDING,
+
+    @Column(name = "last_played_at")
+    var lastPlayedAt: Instant? = null,
 
     @Column(updatable = false)
     val addedAt: Instant = Instant.now(),

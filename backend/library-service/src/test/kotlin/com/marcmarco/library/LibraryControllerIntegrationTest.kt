@@ -61,12 +61,21 @@ class LibraryControllerIntegrationTest {
         return id
     }
 
-    private fun addGame(token: String, gameId: Long, isFavorite: Boolean = false, hoursPlayed: Double? = null): String {
+    private fun addGame(
+        token: String,
+        gameId: Long,
+        isFavorite: Boolean = false,
+        hoursPlayed: Double? = null,
+        status: String? = null,
+        lastPlayedAt: String? = null,
+    ): String {
         val body = jsonBody(
             mapOf(
                 "gameId" to gameId,
                 "isFavorite" to isFavorite,
                 "hoursPlayed" to hoursPlayed,
+                "status" to status,
+                "lastPlayedAt" to lastPlayedAt,
             ),
         )
         return mockMvc.perform(
@@ -129,6 +138,38 @@ class LibraryControllerIntegrationTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer ${session.token}")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonBody(mapOf("isFavorite" to true))),
+        )
+            .andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `anadir sin estado por defecto queda PENDING`() {
+        val session = session()
+        val gameId = createGame("Pendiente_$suffix")
+        val response = addGame(session.token, gameId)
+        val tree = objectMapper.readTree(response)
+        org.junit.jupiter.api.Assertions.assertEquals("PENDING", tree.path("status").asText())
+        org.junit.jupiter.api.Assertions.assertTrue(tree.path("lastPlayedAt").isNull)
+    }
+
+    @Test
+    fun `anadir con estado y ultima vez jugado devuelve 201 con esos valores`() {
+        val session = session()
+        val gameId = createGame("Estado_$suffix")
+        val response = addGame(session.token, gameId, status = "PLAYING", lastPlayedAt = "2026-09-10T20:30:00Z")
+        val tree = objectMapper.readTree(response)
+        org.junit.jupiter.api.Assertions.assertEquals("PLAYING", tree.path("status").asText())
+        org.junit.jupiter.api.Assertions.assertEquals("2026-09-10T20:30:00Z", tree.path("lastPlayedAt").asText())
+    }
+
+    @Test
+    fun `anadir con estado invalido devuelve 400`() {
+        val session = session()
+        mockMvc.perform(
+            post("/api/library")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${session.token}")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonBody(mapOf("gameId" to 1, "status" to "NO_EXISTE"))),
         )
             .andExpect(status().isBadRequest)
     }
@@ -264,6 +305,38 @@ class LibraryControllerIntegrationTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer ${session.token}")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonBody(mapOf("hoursPlayed" to -5.0))),
+        )
+            .andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `actualizar estado y ultima vez jugado deja lo demas intacto`() {
+        val session = session()
+        val gameId = createGame("EditableEstado_$suffix")
+        addGame(session.token, gameId, isFavorite = true, hoursPlayed = 8.0)
+        mockMvc.perform(
+            put("/api/library/$gameId")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${session.token}")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonBody(mapOf("status" to "COMPLETED", "lastPlayedAt" to "2026-09-12T10:00:00Z"))),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("COMPLETED"))
+            .andExpect(jsonPath("$.lastPlayedAt").value("2026-09-12T10:00:00Z"))
+            .andExpect(jsonPath("$.isFavorite").value(true))
+            .andExpect(jsonPath("$.hoursPlayed").value(8.0))
+    }
+
+    @Test
+    fun `actualizar estado a invalido devuelve 400`() {
+        val session = session()
+        val gameId = createGame("EstadoInvalido_$suffix")
+        addGame(session.token, gameId)
+        mockMvc.perform(
+            put("/api/library/$gameId")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${session.token}")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonBody(mapOf("status" to "RANDOM"))),
         )
             .andExpect(status().isBadRequest)
     }
