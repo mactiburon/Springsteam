@@ -57,11 +57,11 @@ class GameService(private val gameRepository: GameRepository) {
         releaseDateFrom: LocalDate? = null,
         releaseDateTo: LocalDate? = null,
     ): List<Game> = gameRepository.search(
-        name = name?.takeIf { it.isNotBlank() },
-        genre = genre?.takeIf { it.isNotBlank() },
-        developer = developer?.takeIf { it.isNotBlank() },
-        publisher = publisher?.takeIf { it.isNotBlank() },
-        releaseDateFrom = releaseDateFrom,
-        releaseDateTo = releaseDateTo,
+        name = name?.takeIf { it.isNotBlank() } ?: "",
+        genre = genre?.takeIf { it.isNotBlank() } ?: "",
+        developer = developer?.takeIf { it.isNotBlank() } ?: "",
+        publisher = publisher?.takeIf { it.isNotBlank() } ?: "",
+        releaseDateFrom = releaseDateFrom ?: LocalDate.of(1, 1, 1),
+        releaseDateTo = releaseDateTo ?: LocalDate.of(9999, 12, 31),
     )
 }

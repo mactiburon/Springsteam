@@ -14,21 +14,21 @@ interface GameRepository : JpaRepository<Game, Long> {
     @Query(
         """
         SELECT g FROM Game g
-        WHERE (:name IS NULL OR LOWER(g.name) LIKE LOWER(CONCAT('%', :name, '%')))
-          AND (:genre IS NULL OR LOWER(g.genre) LIKE LOWER(CONCAT('%', :genre, '%')))
-          AND (:developer IS NULL OR LOWER(g.developer) LIKE LOWER(CONCAT('%', :developer, '%')))
-          AND (:publisher IS NULL OR LOWER(g.publisher) LIKE LOWER(CONCAT('%', :publisher, '%')))
-          AND (:releaseDateFrom IS NULL OR g.releaseDate >= :releaseDateFrom)
-          AND (:releaseDateTo IS NULL OR g.releaseDate <= :releaseDateTo)
+        WHERE (:name = '' OR LOWER(g.name) LIKE LOWER(CONCAT('%', :name, '%')))
+          AND (:genre = '' OR LOWER(g.genre) LIKE LOWER(CONCAT('%', :genre, '%')))
+          AND (:developer = '' OR LOWER(g.developer) LIKE LOWER(CONCAT('%', :developer, '%')))
+          AND (:publisher = '' OR LOWER(g.publisher) LIKE LOWER(CONCAT('%', :publisher, '%')))
+          AND (g.releaseDate IS NULL OR g.releaseDate >= :releaseDateFrom)
+          AND (g.releaseDate IS NULL OR g.releaseDate <= :releaseDateTo)
         """
     )
     fun search(
-        @Param("name") name: String?,
-        @Param("genre") genre: String?,
-        @Param("developer") developer: String?,
-        @Param("publisher") publisher: String?,
-        @Param("releaseDateFrom") releaseDateFrom: LocalDate?,
-        @Param("releaseDateTo") releaseDateTo: LocalDate?,
+        @Param("name") name: String,
+        @Param("genre") genre: String,
+        @Param("developer") developer: String,
+        @Param("publisher") publisher: String,
+        @Param("releaseDateFrom") releaseDateFrom: LocalDate,
+        @Param("releaseDateTo") releaseDateTo: LocalDate,
     ): List<Game>
 
     @Query(

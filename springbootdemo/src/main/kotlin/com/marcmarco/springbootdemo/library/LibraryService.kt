@@ -56,7 +56,7 @@ class LibraryService(
         }
         return libraryRepository.search(
             userId = userId,
-            name = name?.takeIf { it.isNotBlank() },
+            name = name?.takeIf { it.isNotBlank() } ?: "",
             onlyFavorites = onlyFavorites,
         )
     }
