@@ -54,11 +54,11 @@ Plataforma estilo Steam con arquitectura de microservicios: backend en **Spring 
 | Servicio | Puerto | Descripción | Tests |
 |----------|--------|-------------|-------|
 | **auth-service** | 8081 | Usuarios, registro, login, JWT | 27 |
-| **game-service** | 8082 | Catálogo CRUD + importación RAWG | 16 |
-| **library-service** | 8083 | Biblioteca personal + proyección local | 21 |
-| **audit-service** | 8084 | Registro de todos los eventos de dominio | 21 |
+| **game-service** | 8082 | Catálogo CRUD + importación RAWG | 22 |
+| **library-service** | 8083 | Biblioteca personal + categorías + proyección local | 44 |
+| **audit-service** | 8084 | Registro de todos los eventos de dominio | 19 |
 | **api-gateway** | 8080 | Routing → servicios | — |
-| **Total** | | | **85** |
+| **Total** | | | **112** |
 
 ## Quick Start
 
@@ -138,7 +138,7 @@ Ver documentación detallada en [`docs/services/`](docs/services/).
 |----------|----------------------|
 | auth-service | `POST /api/users` (registro) · `POST /api/users/login` (JWT) · `GET /api/users` |
 | game-service | `GET /api/games` · `POST /api/games` · `POST /api/games/import` |
-| library-service | `GET /api/library` · `POST /api/library` · `PUT /api/library/{gameId}` |
+| library-service | `GET/POST /api/library` · `PUT/DELETE /api/library/{gameId}` · `GET/POST /api/categories` · `PUT/DELETE /api/categories/{id}` · `POST/DELETE /api/categories/{categoryId}/library/{gameId}` |
 | audit-service | `GET /api/audit` · `GET /api/audit/{id}` |
 
 ## Decisiones técnicas clave

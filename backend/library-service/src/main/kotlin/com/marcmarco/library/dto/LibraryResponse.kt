@@ -14,6 +14,7 @@ data class LibraryResponse(
     val hoursPlayed: Double,
     val status: LibraryStatus,
     val lastPlayedAt: Instant?,
+    val categories: List<CategorySummary>,
     val addedAt: Instant,
 ) {
     companion object {
@@ -25,6 +26,7 @@ data class LibraryResponse(
             hoursPlayed = entry.hoursPlayed,
             status = entry.status,
             lastPlayedAt = entry.lastPlayedAt,
+            categories = entry.categories.sortedBy { it.name }.map { CategorySummary.from(it) },
             addedAt = entry.addedAt,
         )
     }

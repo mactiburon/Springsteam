@@ -1,5 +1,6 @@
 package com.marcmarco.library
 
+import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -9,6 +10,8 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
+import jakarta.persistence.JoinTable
+import jakarta.persistence.ManyToMany
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
@@ -42,6 +45,14 @@ class LibraryEntry(
 
     @Column(name = "last_played_at")
     var lastPlayedAt: Instant? = null,
+
+    @ManyToMany(fetch = FetchType.LAZY, cascade = [CascadeType.PERSIST])
+    @JoinTable(
+        name = "library_entry_categories",
+        joinColumns = [JoinColumn(name = "library_entry_id")],
+        inverseJoinColumns = [JoinColumn(name = "category_id")],
+    )
+    var categories: MutableSet<LibraryCategory> = mutableSetOf(),
 
     @Column(updatable = false)
     val addedAt: Instant = Instant.now(),
