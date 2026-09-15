@@ -19,6 +19,10 @@ subprojects {
     apply(plugin = "org.springframework.boot")
     apply(plugin = "io.spring.dependency-management")
 
+    dependencies {
+        add("implementation", "org.jetbrains.kotlin:kotlin-reflect")
+    }
+
     extensions.configure<JavaPluginExtension> {
         toolchain.languageVersion.set(JavaLanguageVersion.of(21))
     }
