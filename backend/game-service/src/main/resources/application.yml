@@ -1,6 +1,29 @@
 spring:
   application:
     name: game-service
+  datasource:
+    url: ${GAME_DB_URL:jdbc:postgresql://localhost:5433/gamedb}
+    username: ${GAME_DB_USERNAME:postgres}
+    password: ${GAME_DB_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-jwt-secret-cambiar-antes-de-produccion}
+  events:
+    enabled: ${EVENTS_ENABLED:true}
+  rawg:
+    api-key: ${RAWG_API_KEY:}
+    base-url: ${RAWG_BASE_URL:https://api.rawg.io/api}
 
 server:
   port: 8082

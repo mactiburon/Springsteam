@@ -1,6 +1,32 @@
 spring:
   application:
     name: library-service
+  datasource:
+    url: ${LIBRARY_DB_URL:jdbc:postgresql://localhost:5433/librarydb}
+    username: ${LIBRARY_DB_USERNAME:postgres}
+    password: ${LIBRARY_DB_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: '*'
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-jwt-secret-cambiar-antes-de-produccion}
+  events:
+    enabled: ${EVENTS_ENABLED:true}
 
 server:
   port: 8083

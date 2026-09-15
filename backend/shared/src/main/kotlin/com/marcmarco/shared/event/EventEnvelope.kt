@@ -9,6 +9,20 @@ object Topics {
     const val LIBRARY_EVENTS = "library-events"
 }
 
+/** Tipos de evento del catálogo de juegos (topic [Topics.GAME_EVENTS]). */
+object GameEventTypes {
+    const val CREATED = "game.created"
+    const val UPDATED = "game.updated"
+    const val DELETED = "game.deleted"
+}
+
+/** Tipos de evento de biblioteca (topic [Topics.LIBRARY_EVENTS]). */
+object LibraryEventTypes {
+    const val ADDED = "library.added"
+    const val UPDATED = "library.updated"
+    const val REMOVED = "library.removed"
+}
+
 /**
  * Envoltura común de los eventos publicados en Kafka. `type` identifica la
  * clase de evento (p. ej. "user.registered") y `payload` los datos relevantes,

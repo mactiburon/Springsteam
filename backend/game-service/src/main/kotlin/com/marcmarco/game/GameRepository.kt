@@ -1,0 +1,33 @@
+package com.marcmarco.game
+
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
+import java.time.LocalDate
+
+interface GameRepository : JpaRepository<Game, Long> {
+
+    fun existsByName(name: String): Boolean
+
+    fun existsByNameIgnoreCase(name: String): Boolean
+
+    @Query(
+        """
+        SELECT g FROM Game g
+        WHERE (:name = '' OR LOWER(g.name) LIKE LOWER(CONCAT('%', :name, '%')))
+          AND (:genre = '' OR LOWER(g.genre) LIKE LOWER(CONCAT('%', :genre, '%')))
+          AND (:developer = '' OR LOWER(g.developer) LIKE LOWER(CONCAT('%', :developer, '%')))
+          AND (:publisher = '' OR LOWER(g.publisher) LIKE LOWER(CONCAT('%', :publisher, '%')))
+          AND (g.releaseDate IS NULL OR g.releaseDate >= :releaseDateFrom)
+          AND (g.releaseDate IS NULL OR g.releaseDate <= :releaseDateTo)
+        """
+    )
+    fun search(
+        @Param("name") name: String,
+        @Param("genre") genre: String,
+        @Param("developer") developer: String,
+        @Param("publisher") publisher: String,
+        @Param("releaseDateFrom") releaseDateFrom: LocalDate,
+        @Param("releaseDateTo") releaseDateTo: LocalDate,
+    ): List<Game>
+}
