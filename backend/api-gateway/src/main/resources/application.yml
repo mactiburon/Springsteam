@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: auth-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/auth/**,/api/users/**
+        - id: game-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/games/**
+        - id: library-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/library/**
+        - id: audit-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/audit/**
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
