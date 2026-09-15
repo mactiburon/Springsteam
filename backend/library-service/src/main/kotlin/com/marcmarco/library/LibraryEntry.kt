@@ -25,11 +25,11 @@ class LibraryEntry(
     val id: Long? = null,
 
     @Column(name = "user_id")
-    val userId: Long,
+    val userId: Long = 0,
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "game_id")
-    val game: Game,
+    val game: Game? = null,
 
     var isFavorite: Boolean = false,
 

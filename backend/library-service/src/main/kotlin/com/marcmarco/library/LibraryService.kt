@@ -90,7 +90,7 @@ class LibraryService(
 
 private fun LibraryEntry.toEventPayload(): Map<String, Any?> = mapOf(
     "userId" to userId,
-    "gameId" to (game.id ?: 0L),
+    "gameId" to (game?.id ?: 0L),
     "isFavorite" to isFavorite,
     "hoursPlayed" to hoursPlayed,
     "status" to status.name,

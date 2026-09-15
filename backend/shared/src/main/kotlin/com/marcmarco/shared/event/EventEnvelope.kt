@@ -29,9 +29,9 @@ object LibraryEventTypes {
  * omitiendo siempre información sensible.
  */
 data class EventEnvelope(
-    val type: String,
-    val occurredAt: Instant,
-    val payload: Map<String, Any?>,
+    val type: String = "",
+    val occurredAt: Instant = Instant.now(),
+    val payload: Map<String, Any?> = emptyMap(),
 ) {
     companion object {
         fun of(type: String, payload: Map<String, Any?>): EventEnvelope =

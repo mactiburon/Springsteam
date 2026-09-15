@@ -19,8 +19,8 @@ data class LibraryResponse(
     companion object {
         fun from(entry: LibraryEntry): LibraryResponse = LibraryResponse(
             userId = entry.userId,
-            gameId = requireNotNull(entry.game.id),
-            game = GameResponse.from(entry.game),
+            gameId = requireNotNull(entry.game?.id),
+            game = GameResponse.from(requireNotNull(entry.game)),
             isFavorite = entry.isFavorite,
             hoursPlayed = entry.hoursPlayed,
             status = entry.status,
