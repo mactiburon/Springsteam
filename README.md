@@ -55,10 +55,10 @@ Plataforma estilo Steam con arquitectura de microservicios: backend en **Spring 
 |----------|--------|-------------|-------|
 | **auth-service** | 8081 | Usuarios, registro, login, JWT | 27 |
 | **game-service** | 8082 | Catálogo CRUD + importación RAWG | 22 |
-| **library-service** | 8083 | Biblioteca + categorías + wishlist + proyección local | 66 |
+| **library-service** | 8083 | Biblioteca + categorías + wishlist + proyección local | 94 |
 | **audit-service** | 8084 | Registro de todos los eventos de dominio | 19 |
 | **api-gateway** | 8080 | Routing → servicios | — |
-| **Total** | | | **134** |
+| **Total** | | | **162** |
 
 ## Quick Start
 

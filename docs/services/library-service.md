@@ -4,7 +4,7 @@ Servicio de **biblioteca personal**. Cada usuario tiene su lista de juegos con m
 
 - **Puerto:** `8083`
 - **Base de datos:** `librarydb` (PostgreSQL)
-- **Tests:** 66
+- **Tests:** 94 · (unit tests puros con Mockito para `WishlistService` y `LibraryCategoryService`)
 
 ## Responsabilidades
 
